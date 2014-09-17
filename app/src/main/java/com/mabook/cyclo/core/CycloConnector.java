@@ -61,6 +61,7 @@ public class CycloConnector {
             mBound = false;
         }
     };
+    private CycloProfile mProfile;
 
     public CycloConnector(Context context, StatusListener statusListener) {
         this(context, statusListener, null);
@@ -88,6 +89,14 @@ public class CycloConnector {
             sb.append("DIS:").append(loc.distanceTo(lastLocation)).append("m");
         }
         return sb.toString();
+    }
+
+    public CycloProfile getProfile() {
+        return mProfile;
+    }
+
+    public void setProfile(CycloProfile mProfile) {
+        this.mProfile = mProfile;
     }
 
     public boolean bindService() {
@@ -143,7 +152,7 @@ public class CycloConnector {
         if (klass != null) b.putString("className", klass.getCanonicalName());
         b.putString("startedBy", mContext.getString(mContext.getApplicationInfo().labelRes));
         b.putString("broadcastAction", mBroadcastAction);
-
+        b.putParcelable("profile", mProfile);
         msg.setData(b);
         try {
             mService.send(msg);
@@ -205,6 +214,7 @@ public class CycloConnector {
 
         void onReceiveUpdate(Bundle bundle);
     }
+
 
     class IncomingHandler extends Handler {
         @Override

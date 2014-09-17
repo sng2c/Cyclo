@@ -35,6 +35,7 @@ public class CycloService extends Service {
 
     private static final String TAG = "CycloService";
     final Messenger mMessenger = new Messenger(new IncomingHandler());
+    private final CycloProfile defaultProfile;
     public int state = STATE_STOPPED;
     Location lastLocation = null;
     LocationListener mLocationListener = new LocationListener() {
@@ -75,8 +76,22 @@ public class CycloService extends Service {
     private String mClassName;
     private String mStartedBy;
     private LocationManager mLocationManager;
-    private Criteria mCurrentCriteria;
+    private CycloProfile mCurrentProfile;
 
+    public CycloService() {
+        Criteria criteria = new Criteria();
+        criteria.setAccuracy(Criteria.ACCURACY_FINE);
+        criteria.setPowerRequirement(Criteria.POWER_HIGH);
+        criteria.setAltitudeRequired(true);
+        criteria.setBearingRequired(false);
+        criteria.setSpeedRequired(true);
+        criteria.setCostAllowed(true);
+
+        defaultProfile = new CycloProfile();
+        defaultProfile.setCriteria(criteria);
+        defaultProfile.setMinTime(0);
+        defaultProfile.setMinDistance(0);
+    }
 
     @Override
     public void onCreate() {
@@ -148,23 +163,18 @@ public class CycloService extends Service {
         sendBroadcast(broad);
     }
 
-    Criteria getCurrentCriteria() {
-        if (mCurrentCriteria == null) {
-            Criteria criteria = new Criteria();
-            criteria.setAccuracy(Criteria.ACCURACY_FINE);
-            criteria.setPowerRequirement(Criteria.POWER_MEDIUM);
-            criteria.setAltitudeRequired(true);
-            criteria.setBearingRequired(false);
-            criteria.setSpeedRequired(true);
-            criteria.setCostAllowed(true);
-            return criteria;
+    CycloProfile getCurrentProfile() {
+        if (mCurrentProfile == null) {
+            Log.d(TAG, "Using Default Profile");
+            return defaultProfile;
         } else {
-            return mCurrentCriteria;
+            Log.d(TAG, "Using Current Profile");
+            return mCurrentProfile;
         }
     }
 
     String getBestProvider(String where) {
-        String best = mLocationManager.getBestProvider(getCurrentCriteria(), true);
+        String best = mLocationManager.getBestProvider(getCurrentProfile().getCriteria(), true);
         Log.d(TAG, "BestProvider from " + where + " : " + best);
         if (best == null) {
             best = LocationManager.NETWORK_PROVIDER;
@@ -175,7 +185,8 @@ public class CycloService extends Service {
     String startLocationListening(String where) {
         Log.d(TAG, "startLocationListening from " + where);
         String bestProvider = getBestProvider(where);
-        mLocationManager.requestLocationUpdates(bestProvider, 0, 0, mLocationListener);
+        CycloProfile profile = getCurrentProfile();
+        mLocationManager.requestLocationUpdates(bestProvider, profile.getMinTime(), profile.getMinDistance(), mLocationListener);
         return bestProvider;
     }
 
@@ -192,7 +203,7 @@ public class CycloService extends Service {
         mPackageName = data.getString("packageName", null);
         mStartedBy = data.getString("startedBy", null);
         mBroadcastAction = data.getString("broadcastAction", null);
-        mCurrentCriteria = data.getParcelable("criteria");
+        mCurrentProfile = data.getParcelable("profile");
 
         noti(getString(R.string.noti_ticker_start),
                 String.format(getString(R.string.noti_text_started_by), mStartedBy));
@@ -210,7 +221,6 @@ public class CycloService extends Service {
         Log.d(TAG, "stopLog");
 
         stopForeground(true);
-
 
         sendBroadcast("STOPPED", null);
 

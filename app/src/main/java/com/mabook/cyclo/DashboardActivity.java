@@ -1,6 +1,7 @@
 package com.mabook.cyclo;
 
 import android.app.Activity;
+import android.location.Criteria;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
@@ -8,10 +9,12 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.mabook.cyclo.core.CycloConnector;
+import com.mabook.cyclo.core.CycloProfile;
 
 
 public class DashboardActivity extends Activity {
@@ -24,6 +27,7 @@ public class DashboardActivity extends Activity {
     private Button buttonResume;
     private TextView textUpdate;
     private CycloConnector gpsConn;
+    private Spinner options;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +38,8 @@ public class DashboardActivity extends Activity {
         buttonPause = (Button) findViewById(R.id.button_pause);
         buttonResume = (Button) findViewById(R.id.button_resume);
         textUpdate = (TextView) findViewById(R.id.update);
+        options = (Spinner) findViewById(R.id.options);
+
         gpsConn = new CycloConnector(this, new CycloConnector.StatusListener() {
             @Override
             public void onReceiveStatus(Bundle bundle) {
@@ -45,18 +51,21 @@ public class DashboardActivity extends Activity {
                         buttonStop.setEnabled(false);
                         buttonResume.setEnabled(false);
                         buttonPause.setEnabled(false);
+                        options.setEnabled(true);
                         break;
                     case CycloConnector.STATE_STARTED:
                         buttonStart.setEnabled(false);
                         buttonStop.setEnabled(true);
                         buttonResume.setEnabled(false);
                         buttonPause.setEnabled(true);
+                        options.setEnabled(false);
                         break;
                     case CycloConnector.STATE_PAUSED:
                         buttonStart.setEnabled(false);
                         buttonStop.setEnabled(true);
                         buttonResume.setEnabled(true);
                         buttonPause.setEnabled(false);
+                        options.setEnabled(false);
                         break;
                 }
 
@@ -108,6 +117,54 @@ public class DashboardActivity extends Activity {
     }
 
     public void onClickStart(View view) {
+        int pos = options.getSelectedItemPosition();
+        CycloProfile profile = null;
+        Criteria criteria = null;
+        Log.d(TAG, "onClickStart-" + pos);
+        switch (pos) {
+            case 0:
+                break;
+            case 1:
+                criteria = new Criteria();
+                criteria.setAccuracy(Criteria.ACCURACY_FINE);
+                criteria.setPowerRequirement(Criteria.POWER_HIGH);
+                criteria.setAltitudeRequired(true);
+                criteria.setBearingRequired(false);
+                criteria.setSpeedRequired(true);
+                criteria.setCostAllowed(true);
+                profile = new CycloProfile();
+                profile.setCriteria(criteria);
+                profile.setMinTime(0);
+                profile.setMinDistance(1);
+                break;
+            case 2:
+                criteria = new Criteria();
+                criteria.setAccuracy(Criteria.ACCURACY_COARSE);
+                criteria.setPowerRequirement(Criteria.POWER_MEDIUM);
+                criteria.setAltitudeRequired(true);
+                criteria.setBearingRequired(false);
+                criteria.setSpeedRequired(true);
+                criteria.setCostAllowed(true);
+                profile = new CycloProfile();
+                profile.setCriteria(criteria);
+                profile.setMinTime(0);
+                profile.setMinDistance(0);
+                break;
+            case 3:
+                criteria = new Criteria();
+                criteria.setAccuracy(Criteria.ACCURACY_FINE);
+                criteria.setPowerRequirement(Criteria.POWER_LOW);
+                criteria.setAltitudeRequired(false);
+                criteria.setBearingRequired(false);
+                criteria.setSpeedRequired(true);
+                criteria.setCostAllowed(true);
+                profile = new CycloProfile();
+                profile.setCriteria(criteria);
+                profile.setMinTime(1000 * 30);
+                profile.setMinDistance(1);
+                break;
+        }
+        gpsConn.setProfile(profile);
         gpsConn.start();
     }
 
