@@ -2,9 +2,7 @@
 <resources>
 
     <string name="app_name">Cyclo</string>
-    <string name="title_activity_maps">Map</string>
-    <string name="title_activity_my">MyActivity</string>
-    <string name="hello_world">Hello world!</string>
+    <string name="title_activity_dashboard">DashBoard</string>
     <string name="action_settings">Settings</string>
 
 </resources>

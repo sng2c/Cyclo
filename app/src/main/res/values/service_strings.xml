@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="noti_ticker_start">Cyclo Location Recording Started</string>
+    <string name="noti_ticker_pause">Cyclo Location Recording Paused</string>
+    <string name="noti_ticker_resume">Cyclo Location Recording Resumed</string>
+    <string name="noti_text_started_by">Started by %s</string>
+    <string name="noti_text_paused_by">Paused by %s</string>
+    <string name="noti_title_cyclo">Cyclo Location Recording</string>
+
+</resources>

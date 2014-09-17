@@ -2,6 +2,7 @@ package com.mabook.cyclo;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -13,29 +14,55 @@ import com.mabook.cyclo.core.GPSConnector;
 
 public class DashboardActivity extends Activity {
 
+    private static final String TAG = "DashboardActivity";
     private Button buttonStart;
     private Button buttonStop;
+    private Button buttonPause;
+    private Button buttonResume;
     private GPSConnector gpsConn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_my);
+        setContentView(R.layout.activity_dashboard);
         buttonStart = (Button) findViewById(R.id.button_start);
         buttonStop = (Button) findViewById(R.id.button_stop);
-        gpsConn = new GPSConnector(this, new GPSConnector.StatusListener(){
+        buttonPause = (Button) findViewById(R.id.button_pause);
+        buttonResume = (Button) findViewById(R.id.button_resume);
+        gpsConn = new GPSConnector(this, new GPSConnector.StatusListener() {
             @Override
             public void onReceiveStatus(Bundle bundle) {
-                boolean started = bundle.getBoolean("started", false);
-                buttonStart.setEnabled(!started);
-                buttonStop.setEnabled(started);
+                int state = bundle.getInt("state", GPSConnector.STATE_STOPPED);
+                Log.d(TAG, "state : " + state);
+                switch (state) {
+                    case GPSConnector.STATE_STOPPED:
+                        buttonStart.setEnabled(true);
+                        buttonStop.setEnabled(false);
+                        buttonResume.setEnabled(false);
+                        buttonPause.setEnabled(false);
+                        break;
+                    case GPSConnector.STATE_STARTED:
+                        buttonStart.setEnabled(false);
+                        buttonStop.setEnabled(true);
+                        buttonResume.setEnabled(false);
+                        buttonPause.setEnabled(true);
+                        break;
+                    case GPSConnector.STATE_PAUSED:
+                        buttonStart.setEnabled(false);
+                        buttonStop.setEnabled(true);
+                        buttonResume.setEnabled(true);
+                        buttonPause.setEnabled(false);
+                        break;
+                }
+
             }
 
             @Override
             public void onReceiveUpdate(Bundle bundle) {
-                Toast.makeText(DashboardActivity.this,"UPDATE:"+bundle.getString("type"),Toast.LENGTH_LONG).show();
+                Toast.makeText(DashboardActivity.this, "UPDATE:" + bundle.getString("type"), Toast.LENGTH_LONG).show();
             }
         });
+
     }
 
 
@@ -70,10 +97,19 @@ public class DashboardActivity extends Activity {
         gpsConn.unbindService();
     }
 
-    public void onClickStart(View view){
-        gpsConn.start("DashBoard");
+    public void onClickStart(View view) {
+        gpsConn.start();
     }
-    public void onClickStop(View view){
+
+    public void onClickStop(View view) {
         gpsConn.stop();
+    }
+
+    public void onClickPause(View view) {
+        gpsConn.pause();
+    }
+
+    public void onClickResume(View view) {
+        gpsConn.resume();
     }
 }

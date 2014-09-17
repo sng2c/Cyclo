@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="noti_ticker_start">Cyclo 위치 기록 시작됨</string>
+    <string name="noti_ticker_pause">Cyclo 위치 기록 일시중지됨</string>
+    <string name="noti_ticker_resume">Cyclo 위치 기록 다시 시작됨</string>
+    <string name="noti_text_started_by">%s에 의해 기록 시작됨</string>
+    <string name="noti_text_paused_by">%s에 의해 기록 일시중지됨</string>
+    <string name="noti_title_cyclo">Cyclo 위치 기록 서비스</string>
+
+</resources>
