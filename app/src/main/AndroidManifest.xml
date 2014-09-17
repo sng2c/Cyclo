@@ -9,11 +9,11 @@
         android:theme="@style/AppTheme" >
 
         <service
-            android:name=".core.GPSService"
+            android:name=".core.CycloService"
             android:enabled="true"
             android:exported="true" >
             <intent-filter>
-                <action android:name="com.mabook.cyclo.core.GPSService.ACTION_BIND" />
+                <action android:name="com.mabook.cyclo.core.CycloService.ACTION_BIND" />
             </intent-filter>
         </service>
 

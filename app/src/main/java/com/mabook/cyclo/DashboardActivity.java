@@ -9,7 +9,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
-import com.mabook.cyclo.core.GPSConnector;
+import com.mabook.cyclo.core.CycloConnector;
 
 
 public class DashboardActivity extends Activity {
@@ -19,7 +19,7 @@ public class DashboardActivity extends Activity {
     private Button buttonStop;
     private Button buttonPause;
     private Button buttonResume;
-    private GPSConnector gpsConn;
+    private CycloConnector gpsConn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,25 +29,25 @@ public class DashboardActivity extends Activity {
         buttonStop = (Button) findViewById(R.id.button_stop);
         buttonPause = (Button) findViewById(R.id.button_pause);
         buttonResume = (Button) findViewById(R.id.button_resume);
-        gpsConn = new GPSConnector(this, new GPSConnector.StatusListener() {
+        gpsConn = new CycloConnector(this, new CycloConnector.StatusListener() {
             @Override
             public void onReceiveStatus(Bundle bundle) {
-                int state = bundle.getInt("state", GPSConnector.STATE_STOPPED);
+                int state = bundle.getInt("state", CycloConnector.STATE_STOPPED);
                 Log.d(TAG, "state : " + state);
                 switch (state) {
-                    case GPSConnector.STATE_STOPPED:
+                    case CycloConnector.STATE_STOPPED:
                         buttonStart.setEnabled(true);
                         buttonStop.setEnabled(false);
                         buttonResume.setEnabled(false);
                         buttonPause.setEnabled(false);
                         break;
-                    case GPSConnector.STATE_STARTED:
+                    case CycloConnector.STATE_STARTED:
                         buttonStart.setEnabled(false);
                         buttonStop.setEnabled(true);
                         buttonResume.setEnabled(false);
                         buttonPause.setEnabled(true);
                         break;
-                    case GPSConnector.STATE_PAUSED:
+                    case CycloConnector.STATE_PAUSED:
                         buttonStart.setEnabled(false);
                         buttonStop.setEnabled(true);
                         buttonResume.setEnabled(true);

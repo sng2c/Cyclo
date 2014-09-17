@@ -15,21 +15,21 @@ import android.util.Log;
 
 import com.mabook.cyclo.R;
 
-import static com.mabook.cyclo.core.GPSConnector.MSG_PAUSE;
-import static com.mabook.cyclo.core.GPSConnector.MSG_RESUME;
-import static com.mabook.cyclo.core.GPSConnector.MSG_START;
-import static com.mabook.cyclo.core.GPSConnector.MSG_STATUS;
-import static com.mabook.cyclo.core.GPSConnector.MSG_STOP;
-import static com.mabook.cyclo.core.GPSConnector.STATE_NOT_ALLOWED;
-import static com.mabook.cyclo.core.GPSConnector.STATE_PAUSED;
-import static com.mabook.cyclo.core.GPSConnector.STATE_STARTED;
-import static com.mabook.cyclo.core.GPSConnector.STATE_STOPPED;
+import static com.mabook.cyclo.core.CycloConnector.MSG_PAUSE;
+import static com.mabook.cyclo.core.CycloConnector.MSG_RESUME;
+import static com.mabook.cyclo.core.CycloConnector.MSG_START;
+import static com.mabook.cyclo.core.CycloConnector.MSG_STATUS;
+import static com.mabook.cyclo.core.CycloConnector.MSG_STOP;
+import static com.mabook.cyclo.core.CycloConnector.STATE_NOT_ALLOWED;
+import static com.mabook.cyclo.core.CycloConnector.STATE_PAUSED;
+import static com.mabook.cyclo.core.CycloConnector.STATE_STARTED;
+import static com.mabook.cyclo.core.CycloConnector.STATE_STOPPED;
 
 
-public class GPSService extends Service {
+public class CycloService extends Service {
 
 
-    private static final String TAG = "GPSService";
+    private static final String TAG = "CycloService";
     final Messenger mMessenger = new Messenger(new IncomingHandler());
     public int state = STATE_STOPPED;
     private String mBroadcastAction;
@@ -38,7 +38,7 @@ public class GPSService extends Service {
     private String mClassName;
     private String mStartedBy;
 
-    public GPSService() {
+    public CycloService() {
     }
 
     void replyNotAllowed(Message msg) {

@@ -18,14 +18,14 @@ import static android.content.Context.BIND_AUTO_CREATE;
 /**
  * Created by sng2c on 2014. 9. 17..
  */
-public class GPSConnector {
+public class CycloConnector {
     public static final int MSG_STATUS = 0;
     public static final int MSG_START = 1;
     public static final int MSG_STOP = 2;
     public static final int MSG_PAUSE = 3;
     public static final int MSG_RESUME = 4;
 
-    public static final String ACTION_BIND = "com.mabook.cyclo.core.GPSService.ACTION_BIND";
+    public static final String ACTION_BIND = "com.mabook.cyclo.core.CycloService.ACTION_BIND";
 
     public static final int STATE_STOPPED = 1;
     public static final int STATE_STARTED = 2;
@@ -62,11 +62,11 @@ public class GPSConnector {
         }
     };
 
-    public GPSConnector(Context context, StatusListener statusListener) {
+    public CycloConnector(Context context, StatusListener statusListener) {
         this(context, statusListener, null);
     }
 
-    public GPSConnector(Context context, StatusListener statusListener, String broadcastAction) {
+    public CycloConnector(Context context, StatusListener statusListener, String broadcastAction) {
         mContext = context;
         mStatusListener = statusListener;
         mBroadcastAction = broadcastAction;
