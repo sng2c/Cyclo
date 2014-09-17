@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.location.Criteria;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -11,10 +12,18 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.mabook.cyclo.core.CycloConnector;
 import com.mabook.cyclo.core.CycloProfile;
+
+import org.json.JSONObject;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
 
 
 public class DashboardActivity extends Activity {
@@ -28,6 +37,7 @@ public class DashboardActivity extends Activity {
     private TextView textUpdate;
     private CycloConnector gpsConn;
     private Spinner options;
+    private FileWriter mLogWriter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,11 +83,26 @@ public class DashboardActivity extends Activity {
 
             @Override
             public void onReceiveUpdate(Bundle bundle) {
-                Toast.makeText(DashboardActivity.this, bundle.getString("type"), Toast.LENGTH_LONG).show();
+                textUpdate.setText(bundle.getString("type"));
                 Location location = bundle.getParcelable("location");
                 if (location != null) {
                     textUpdate.setText(CycloConnector.dumpLocation(location, lastLocation));
                     lastLocation = location;
+                    HashMap<String, String> map = new HashMap<String, String>();
+                    map.put("lat", String.valueOf(location.getLatitude()));
+                    map.put("lng", String.valueOf(location.getLongitude()));
+                    map.put("alt", String.valueOf(location.getAltitude()));
+                    map.put("spd", String.valueOf(location.getSpeed()));
+                    map.put("acc", String.valueOf(location.getAccuracy()));
+                    map.put("uts", String.valueOf(location.getTime()));
+
+                    JSONObject jobj = new JSONObject(map);
+                    try {
+                        mLogWriter.write(jobj.toString() + "\n");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
                 }
             }
         });
@@ -117,6 +142,7 @@ public class DashboardActivity extends Activity {
     }
 
     public void onClickStart(View view) {
+        String name = (String) options.getSelectedItem();
         int pos = options.getSelectedItemPosition();
         CycloProfile profile = null;
         Criteria criteria = null;
@@ -164,12 +190,38 @@ public class DashboardActivity extends Activity {
                 profile.setMinDistance(1);
                 break;
         }
+
+        // file open
+        name = name.replaceAll("\\s", "_");
+        File root = Environment.getExternalStorageDirectory();
+        File base = new File(root, "CycloDashboard");
+        if (!base.exists()) {
+            base.mkdir();
+        }
+
+        Date now = new Date();
+        SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd-HHmmss");
+
+        File logFile = new File(base, name + "-" + format.format(now) + ".txt");
+        try {
+            mLogWriter = new FileWriter(logFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         gpsConn.setProfile(profile);
         gpsConn.start();
     }
 
     public void onClickStop(View view) {
         gpsConn.stop();
+        // file close
+        if (mLogWriter != null) {
+            try {
+                mLogWriter.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public void onClickPause(View view) {
