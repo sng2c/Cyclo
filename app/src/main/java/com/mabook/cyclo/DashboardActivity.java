@@ -1,12 +1,14 @@
 package com.mabook.cyclo;
 
 import android.app.Activity;
+import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.mabook.cyclo.core.CycloConnector;
@@ -15,10 +17,12 @@ import com.mabook.cyclo.core.CycloConnector;
 public class DashboardActivity extends Activity {
 
     private static final String TAG = "DashboardActivity";
+    Location lastLocation;
     private Button buttonStart;
     private Button buttonStop;
     private Button buttonPause;
     private Button buttonResume;
+    private TextView textUpdate;
     private CycloConnector gpsConn;
 
     @Override
@@ -29,6 +33,7 @@ public class DashboardActivity extends Activity {
         buttonStop = (Button) findViewById(R.id.button_stop);
         buttonPause = (Button) findViewById(R.id.button_pause);
         buttonResume = (Button) findViewById(R.id.button_resume);
+        textUpdate = (TextView) findViewById(R.id.update);
         gpsConn = new CycloConnector(this, new CycloConnector.StatusListener() {
             @Override
             public void onReceiveStatus(Bundle bundle) {
@@ -59,7 +64,12 @@ public class DashboardActivity extends Activity {
 
             @Override
             public void onReceiveUpdate(Bundle bundle) {
-                Toast.makeText(DashboardActivity.this, "UPDATE:" + bundle.getString("type"), Toast.LENGTH_LONG).show();
+                Toast.makeText(DashboardActivity.this, bundle.getString("type"), Toast.LENGTH_LONG).show();
+                Location location = bundle.getParcelable("location");
+                if (location != null) {
+                    textUpdate.setText(CycloConnector.dumpLocation(location, lastLocation));
+                    lastLocation = location;
+                }
             }
         });
 

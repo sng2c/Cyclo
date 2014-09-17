@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -31,7 +32,6 @@ public class CycloConnector {
     public static final int STATE_STARTED = 2;
     public static final int STATE_PAUSED = 3;
     public static final int STATE_NOT_ALLOWED = 4;
-
     private final StatusListener mStatusListener;
     BroadcastReceiver mUpdateReceiver = new BroadcastReceiver() {
         @Override
@@ -75,6 +75,19 @@ public class CycloConnector {
         }
         handler = new IncomingHandler();
         mClientMessenger = new Messenger(handler);
+    }
+
+    public static String dumpLocation(Location loc, Location lastLocation) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("ACC:").append(loc.getAccuracy()).append("m").append("\n")
+                .append("LAT:").append(loc.getLatitude()).append("\n")
+                .append("LNG:").append(loc.getLongitude()).append("\n")
+                .append("ALT:").append(loc.getAltitude()).append("m\n")
+                .append("SPD:").append(loc.getSpeed()).append("m/s").append("\n");
+        if (lastLocation != null) {
+            sb.append("DIS:").append(loc.distanceTo(lastLocation)).append("m");
+        }
+        return sb.toString();
     }
 
     public boolean bindService() {

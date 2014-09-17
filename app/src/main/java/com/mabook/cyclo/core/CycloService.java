@@ -4,7 +4,12 @@ import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -28,17 +33,55 @@ import static com.mabook.cyclo.core.CycloConnector.STATE_STOPPED;
 
 public class CycloService extends Service {
 
-
     private static final String TAG = "CycloService";
     final Messenger mMessenger = new Messenger(new IncomingHandler());
     public int state = STATE_STOPPED;
+    Location lastLocation = null;
+    LocationListener mLocationListener = new LocationListener() {
+
+        @Override
+        public void onLocationChanged(Location location) {
+            if (location != null) {
+                Log.d(TAG, "location:" + CycloConnector.dumpLocation(location, lastLocation));
+                Bundle b = new Bundle();
+                b.putParcelable("location", location);
+                sendBroadcast("UPDATE", b);
+                lastLocation = location;
+            }
+        }
+
+        @Override
+        public void onStatusChanged(String s, int i, Bundle bundle) {
+            Log.d(TAG, "provider:" + s + ", " + i);
+            Log.d(TAG, "provider bundle:" + bundle.toString());
+            sendBroadcast("UPDATE_PROVIDER!" + s, null);
+        }
+
+        @Override
+        public void onProviderEnabled(String s) {
+            Log.d(TAG, "provider+:" + s);
+            sendBroadcast("UPDATE_PROVIDER+" + s, null);
+        }
+
+        @Override
+        public void onProviderDisabled(String s) {
+            Log.d(TAG, "provider-:" + s);
+            sendBroadcast("UPDATE_PROVIDER-" + s, null);
+        }
+    };
     private String mBroadcastAction;
     private String mPackageName;
     private String mAction;
     private String mClassName;
     private String mStartedBy;
+    private LocationManager mLocationManager;
+    private Criteria mCurrentCriteria;
 
-    public CycloService() {
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        mLocationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
     }
 
     void replyNotAllowed(Message msg) {
@@ -98,6 +141,49 @@ public class CycloService extends Service {
         startForeground(1, notification);
     }
 
+    void sendBroadcast(String type, Bundle b) {
+        Intent broad = new Intent(mBroadcastAction);
+        if (b != null) broad.putExtras(b);
+        broad.putExtra("type", type);
+        sendBroadcast(broad);
+    }
+
+    Criteria getCurrentCriteria() {
+        if (mCurrentCriteria == null) {
+            Criteria criteria = new Criteria();
+            criteria.setAccuracy(Criteria.ACCURACY_FINE);
+            criteria.setPowerRequirement(Criteria.POWER_MEDIUM);
+            criteria.setAltitudeRequired(true);
+            criteria.setBearingRequired(false);
+            criteria.setSpeedRequired(true);
+            criteria.setCostAllowed(true);
+            return criteria;
+        } else {
+            return mCurrentCriteria;
+        }
+    }
+
+    String getBestProvider(String where) {
+        String best = mLocationManager.getBestProvider(getCurrentCriteria(), true);
+        Log.d(TAG, "BestProvider from " + where + " : " + best);
+        if (best == null) {
+            best = LocationManager.NETWORK_PROVIDER;
+        }
+        return best;
+    }
+
+    String startLocationListening(String where) {
+        Log.d(TAG, "startLocationListening from " + where);
+        String bestProvider = getBestProvider(where);
+        mLocationManager.requestLocationUpdates(bestProvider, 0, 0, mLocationListener);
+        return bestProvider;
+    }
+
+    void stopLocationListening() {
+        mLocationManager.removeUpdates(mLocationListener);
+    }
+
+
     void startLog(Bundle data) {
         Log.d(TAG, "startLog");
 
@@ -106,24 +192,18 @@ public class CycloService extends Service {
         mPackageName = data.getString("packageName", null);
         mStartedBy = data.getString("startedBy", null);
         mBroadcastAction = data.getString("broadcastAction", null);
+        mCurrentCriteria = data.getParcelable("criteria");
 
         noti(getString(R.string.noti_ticker_start),
                 String.format(getString(R.string.noti_text_started_by), mStartedBy));
 
-        Intent broad = new Intent(mBroadcastAction);
-        broad.putExtra("type", "STARTED");
-        sendBroadcast(broad);
+        sendBroadcast("STARTED", null);
+
+        String bestProvider = startLocationListening("startLog");
+        mLocationListener.onLocationChanged(mLocationManager.getLastKnownLocation(bestProvider));
+
 
         state = STATE_STARTED;
-    }
-
-    boolean checkStarter(Bundle data) {
-        if (mPackageName == null) {
-            return true;
-        } else if (mPackageName.equals(data.getString("packageName"))) {
-            return true;
-        }
-        return false;
     }
 
     void stopLog() {
@@ -131,13 +211,15 @@ public class CycloService extends Service {
 
         stopForeground(true);
 
-        Intent broad = new Intent(mBroadcastAction);
-        broad.putExtra("type", "STOPPED");
-        sendBroadcast(broad);
+
+        sendBroadcast("STOPPED", null);
+
+        stopLocationListening();
 
         state = STATE_STOPPED;
 
         mPackageName = null;
+        lastLocation = null;
     }
 
     void pauseLog() {
@@ -146,11 +228,12 @@ public class CycloService extends Service {
         noti(getString(R.string.noti_ticker_pause),
                 String.format(getString(R.string.noti_text_paused_by), mStartedBy));
 
-        Intent broad = new Intent(mBroadcastAction);
-        broad.putExtra("type", "PAUSED");
-        sendBroadcast(broad);
+        stopLocationListening();
+
+        sendBroadcast("PAUSED", null);
 
         state = STATE_PAUSED;
+        lastLocation = null;
     }
 
     void resumeLog() {
@@ -159,9 +242,10 @@ public class CycloService extends Service {
         noti(getString(R.string.noti_ticker_resume),
                 String.format(getString(R.string.noti_text_started_by), mStartedBy));
 
-        Intent broad = new Intent(mBroadcastAction);
-        broad.putExtra("type", "RESUMED");
-        sendBroadcast(broad);
+
+        sendBroadcast("RESUMED", null);
+
+        startLocationListening("resumeLog");
 
         state = STATE_STARTED;
     }
@@ -175,6 +259,15 @@ public class CycloService extends Service {
     @Override
     public void onDestroy() {
         Log.d(TAG, "onDestroy");
+    }
+
+    boolean checkStarter(Bundle data) {
+        if (mPackageName == null) {
+            return true;
+        } else if (mPackageName.equals(data.getString("packageName"))) {
+            return true;
+        }
+        return false;
     }
 
     class IncomingHandler extends Handler {
