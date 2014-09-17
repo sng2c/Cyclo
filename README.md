@@ -31,5 +31,4 @@ To do
 * Calculate speed and distance and duration.
 * Detect break-time.
 
-I don't write code to gathering location and detect break times yet.
 I need your help.
