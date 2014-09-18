@@ -34,6 +34,7 @@ public class DashboardActivity extends Activity {
     private Button buttonStop;
     private Button buttonPause;
     private Button buttonResume;
+    private Button buttonUpdate;
     private TextView textUpdate;
     private CycloConnector gpsConn;
     private Spinner options;
@@ -43,12 +44,14 @@ public class DashboardActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
+
         buttonStart = (Button) findViewById(R.id.button_start);
         buttonStop = (Button) findViewById(R.id.button_stop);
         buttonPause = (Button) findViewById(R.id.button_pause);
         buttonResume = (Button) findViewById(R.id.button_resume);
         textUpdate = (TextView) findViewById(R.id.update);
         options = (Spinner) findViewById(R.id.options);
+        buttonUpdate = (Button) findViewById(R.id.button_update);
 
         gpsConn = new CycloConnector(this, new CycloConnector.StatusListener() {
             @Override
@@ -62,13 +65,15 @@ public class DashboardActivity extends Activity {
                         buttonResume.setEnabled(false);
                         buttonPause.setEnabled(false);
                         options.setEnabled(true);
+                        buttonUpdate.setEnabled(false);
                         break;
                     case CycloConnector.STATE_STARTED:
                         buttonStart.setEnabled(false);
                         buttonStop.setEnabled(true);
                         buttonResume.setEnabled(false);
                         buttonPause.setEnabled(true);
-                        options.setEnabled(false);
+                        options.setEnabled(true);
+                        buttonUpdate.setEnabled(true);
                         break;
                     case CycloConnector.STATE_PAUSED:
                         buttonStart.setEnabled(false);
@@ -76,6 +81,7 @@ public class DashboardActivity extends Activity {
                         buttonResume.setEnabled(true);
                         buttonPause.setEnabled(false);
                         options.setEnabled(false);
+                        buttonUpdate.setEnabled(false);
                         break;
                 }
 
@@ -141,13 +147,10 @@ public class DashboardActivity extends Activity {
         gpsConn.unbindService();
     }
 
-    public void onClickStart(View view) {
-        String name = (String) options.getSelectedItem();
-        int pos = options.getSelectedItemPosition();
+    public CycloProfile getProfile(int idx) {
         CycloProfile profile = null;
         Criteria criteria = null;
-        Log.d(TAG, "onClickStart-" + pos);
-        switch (pos) {
+        switch (idx) {
             case 0:
                 break;
             case 1:
@@ -190,6 +193,13 @@ public class DashboardActivity extends Activity {
                 profile.setMinDistance(1);
                 break;
         }
+        return profile;
+    }
+
+    public void onClickStart(View view) {
+        String name = (String) options.getSelectedItem();
+        int pos = options.getSelectedItemPosition();
+        CycloProfile profile = getProfile(pos);
 
         // file open
         name = name.replaceAll("\\s", "_");
@@ -218,11 +228,49 @@ public class DashboardActivity extends Activity {
         if (mLogWriter != null) {
             try {
                 mLogWriter.close();
+                mLogWriter = null;
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
+
+    public void onClickUpdate(View view) {
+        String name = (String) options.getSelectedItem();
+        int pos = options.getSelectedItemPosition();
+        CycloProfile profile = getProfile(pos);
+
+        if (mLogWriter != null) {
+            try {
+                mLogWriter.close();
+                mLogWriter = null;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // file open
+        name = name.replaceAll("\\s", "_");
+        File root = Environment.getExternalStorageDirectory();
+        File base = new File(root, "CycloDashboard");
+        if (!base.exists()) {
+            base.mkdir();
+        }
+
+        Date now = new Date();
+        SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd-HHmmss");
+
+        File logFile = new File(base, name + "-" + format.format(now) + ".txt");
+        try {
+            mLogWriter = new FileWriter(logFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        gpsConn.setProfile(profile);
+        gpsConn.updateProfile();
+        Log.d(TAG, "onClickUpdate");
+    }
+
 
     public void onClickPause(View view) {
         gpsConn.pause();

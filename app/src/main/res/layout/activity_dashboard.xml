@@ -9,11 +9,24 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.mabook.cyclo.DashboardActivity">
 
-    <Spinner
-        android:id="@+id/options"
+    <LinearLayout
         android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <Spinner
+        android:id="@+id/options"
+            android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:entries="@array/presets"></Spinner>
+
+        <Button
+            android:id="@+id/button_update"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:enabled="false"
+            android:onClick="onClickUpdate"
+            android:text="Update" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -52,6 +65,7 @@
         android:onClick="onClickStop"
         android:text="Stop"
         />
+
 
     </LinearLayout>
 

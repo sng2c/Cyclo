@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Criteria;
+import android.location.GpsStatus;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -25,6 +26,7 @@ import static com.mabook.cyclo.core.CycloConnector.MSG_RESUME;
 import static com.mabook.cyclo.core.CycloConnector.MSG_START;
 import static com.mabook.cyclo.core.CycloConnector.MSG_STATUS;
 import static com.mabook.cyclo.core.CycloConnector.MSG_STOP;
+import static com.mabook.cyclo.core.CycloConnector.MSG_UPDATE_PROFILE;
 import static com.mabook.cyclo.core.CycloConnector.STATE_NOT_ALLOWED;
 import static com.mabook.cyclo.core.CycloConnector.STATE_PAUSED;
 import static com.mabook.cyclo.core.CycloConnector.STATE_STARTED;
@@ -34,14 +36,70 @@ import static com.mabook.cyclo.core.CycloConnector.STATE_STOPPED;
 public class CycloService extends Service {
 
     private static final String TAG = "CycloService";
+    GpsStatus.Listener mGpsListener = new GpsStatus.Listener() {
+        @Override
+        public void onGpsStatusChanged(int i) {
+            Log.d(TAG, "onGpsStatusChanged : " + i);
+            String type = null;
+            switch (i) {
+                case GpsStatus.GPS_EVENT_STARTED:
+                    type = "GPS_EVENT_STARTED";
+                    break;
+                case GpsStatus.GPS_EVENT_STOPPED:
+                    type = "GPS_EVENT_STOPPED";
+                    break;
+                case GpsStatus.GPS_EVENT_FIRST_FIX:
+                    type = "GPS_EVENT_FIRST_FIX";
+                    break;
+                case GpsStatus.GPS_EVENT_SATELLITE_STATUS:
+                    type = "GPS_EVENT_SATELLITE_STATUS";
+                    break;
+            }
+            if (type != null)
+                sendBroadcast(type, null);
+        }
+    };
     final Messenger mMessenger = new Messenger(new IncomingHandler());
     private final CycloProfile defaultProfile;
     public int state = STATE_STOPPED;
     Location lastLocation = null;
+    boolean paused = false;
+    LocationListener mDummyLocationListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(Location location) {
+        }
+
+        @Override
+        public void onStatusChanged(String s, int i, Bundle bundle) {
+        }
+
+        @Override
+        public void onProviderEnabled(String s) {
+        }
+
+        @Override
+        public void onProviderDisabled(String s) {
+        }
+    };
+    private String mBroadcastAction;
+    private String mPackageName;
+    private String mAction;
+    private String mClassName;
+    private String mStartedBy;
+    private LocationManager mLocationManager;
+    private CycloProfile mCurrentProfile;
+    private boolean mRestarting = false;
     LocationListener mLocationListener = new LocationListener() {
 
         @Override
         public void onLocationChanged(Location location) {
+            if (mRestarting) {
+                mLocationManager.removeUpdates(mDummyLocationListener);
+                mRestarting = false;
+            }
+            if (state == STATE_PAUSED) { // PAUSED
+                return;
+            }
             if (location != null) {
                 Log.d(TAG, "location:" + CycloConnector.dumpLocation(location, lastLocation));
                 Bundle b = new Bundle();
@@ -70,13 +128,6 @@ public class CycloService extends Service {
             sendBroadcast("UPDATE_PROVIDER-" + s, null);
         }
     };
-    private String mBroadcastAction;
-    private String mPackageName;
-    private String mAction;
-    private String mClassName;
-    private String mStartedBy;
-    private LocationManager mLocationManager;
-    private CycloProfile mCurrentProfile;
 
     public CycloService() {
         Criteria criteria = new Criteria();
@@ -97,6 +148,8 @@ public class CycloService extends Service {
     public void onCreate() {
         super.onCreate();
         mLocationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+        mLocationManager.addGpsStatusListener(mGpsListener);
+
     }
 
     void replyNotAllowed(Message msg) {
@@ -129,7 +182,7 @@ public class CycloService extends Service {
         }
     }
 
-    void noti(String ticker, String text) {
+    void notifyForeground(String ticker, String text) {
         Intent actionIntent;
         if (mAction != null) {
             actionIntent = new Intent(mAction);
@@ -194,6 +247,12 @@ public class CycloService extends Service {
         mLocationManager.removeUpdates(mLocationListener);
     }
 
+    void safeRestartLocationListening() {
+        mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mDummyLocationListener);
+        mRestarting = true;
+        stopLocationListening();
+        startLocationListening("safeRestartLocationListening");
+    }
 
     void startLog(Bundle data) {
         Log.d(TAG, "startLog");
@@ -205,14 +264,25 @@ public class CycloService extends Service {
         mBroadcastAction = data.getString("broadcastAction", null);
         mCurrentProfile = data.getParcelable("profile");
 
-        noti(getString(R.string.noti_ticker_start),
+        notifyForeground(getString(R.string.noti_ticker_start),
                 String.format(getString(R.string.noti_text_started_by), mStartedBy));
 
         sendBroadcast("STARTED", null);
 
-        String bestProvider = startLocationListening("startLog");
-        mLocationListener.onLocationChanged(mLocationManager.getLastKnownLocation(bestProvider));
+        startLocationListening("startLog");
 
+        state = STATE_STARTED;
+    }
+
+    void updateProfile(Bundle data) {
+
+        Log.d(TAG, "updateProfile");
+
+        mCurrentProfile = data.getParcelable("profile");
+
+        sendBroadcast("UPDATE_PROFILE", null);
+
+        safeRestartLocationListening();
 
         state = STATE_STARTED;
     }
@@ -235,10 +305,8 @@ public class CycloService extends Service {
     void pauseLog() {
         Log.d(TAG, "stopLog");
 
-        noti(getString(R.string.noti_ticker_pause),
+        notifyForeground(getString(R.string.noti_ticker_pause),
                 String.format(getString(R.string.noti_text_paused_by), mStartedBy));
-
-        stopLocationListening();
 
         sendBroadcast("PAUSED", null);
 
@@ -249,13 +317,10 @@ public class CycloService extends Service {
     void resumeLog() {
         Log.d(TAG, "stopLog");
 
-        noti(getString(R.string.noti_ticker_resume),
+        notifyForeground(getString(R.string.noti_ticker_resume),
                 String.format(getString(R.string.noti_text_started_by), mStartedBy));
 
-
         sendBroadcast("RESUMED", null);
-
-        startLocationListening("resumeLog");
 
         state = STATE_STARTED;
     }
@@ -269,6 +334,7 @@ public class CycloService extends Service {
     @Override
     public void onDestroy() {
         Log.d(TAG, "onDestroy");
+        mLocationManager.removeGpsStatusListener(mGpsListener);
     }
 
     boolean checkStarter(Bundle data) {
@@ -304,6 +370,11 @@ public class CycloService extends Service {
                         break;
                     case MSG_STATUS:
                         replyStatus(msg);
+                        break;
+                    case MSG_UPDATE_PROFILE:
+                        updateProfile(msg.getData());
+                        replyStatus(msg);
+                        break;
                     default:
                         super.handleMessage(msg);
                 }
@@ -311,6 +382,7 @@ public class CycloService extends Service {
                 switch (msg.what) {
                     case MSG_STATUS:
                         replyStatus(msg);
+                        break;
                     default:
                         replyNotAllowed(msg);
                 }

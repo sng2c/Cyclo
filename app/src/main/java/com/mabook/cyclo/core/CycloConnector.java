@@ -25,6 +25,7 @@ public class CycloConnector {
     public static final int MSG_STOP = 2;
     public static final int MSG_PAUSE = 3;
     public static final int MSG_RESUME = 4;
+    public static final int MSG_UPDATE_PROFILE = 5;
 
     public static final String ACTION_BIND = "com.mabook.cyclo.core.CycloService.ACTION_BIND";
 
@@ -152,6 +153,22 @@ public class CycloConnector {
         if (klass != null) b.putString("className", klass.getCanonicalName());
         b.putString("startedBy", mContext.getString(mContext.getApplicationInfo().labelRes));
         b.putString("broadcastAction", mBroadcastAction);
+        b.putParcelable("profile", mProfile);
+        msg.setData(b);
+        try {
+            mService.send(msg);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void updateProfile() {
+        if (!mBound) return;
+
+        Message msg = Message.obtain(null, MSG_UPDATE_PROFILE);
+        msg.replyTo = mClientMessenger;
+        Bundle b = new Bundle();
+        b.putString("packageName", mContext.getPackageName());
         b.putParcelable("profile", mProfile);
         msg.setData(b);
         try {
