@@ -96,8 +96,8 @@ Recording in background
 
 If you want to receive Locations when your app is background, 
 
-1. CREATE CycloConnector in your `LOCAL SERVICE` as foreground.
-1. CREATE explicit `BroadcastReceiver` which is descripted in AndroidManifest.xml, 
+* 1st solution. CREATE CycloConnector in your `LOCAL SERVICE` as foreground.
+* 2nd solution. CREATE explicit `BroadcastReceiver` which is descripted in AndroidManifest.xml, 
   and use CycloConnector(context, statusListener, broadcastAction) constructor.
   It is required to use same `ACTION` string both like below.
 
