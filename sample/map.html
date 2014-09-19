@@ -1,25 +1,23 @@
-
-
 <!DOCTYPE html>
 <html>
-  <head>
+<head>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <meta charset="utf-8">
     <title>Circles</title>
     <style>
-      html, body{
+        html, body{
         margin: 0px;
         padding: 0px
-      }
-      #map-canvas {
+        }
+        #map-canvas {
         height: 500px;
         margin: 0px;
         padding: 0px
-      }
-      #json_lines {
+        }
+        #json_lines {
         height:100px;
         width:100%;
-      }
+        }
 
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
@@ -185,11 +183,12 @@ function addWayPoint(obj){
 
 google.maps.event.addDomListener(window, 'load', initialize);
 
+
     </script>
-  </head>
-  <body>
-    <div id="map-canvas"></div>
-    <textarea id="json_lines">#aa0000
+</head>
+<body>
+<div id="map-canvas"></div>
+<textarea id="json_lines">#aa0000
 {"uts":"1410998161000","lng":"127.14021817","spd":"1.0","lat":"37.54810405","alt":"53.5","acc":"11.0"}
 {"uts":"1410998170000","lng":"127.1402196","spd":"1.0","lat":"37.5480003","alt":"53.400001525878906","acc":"19.0"}
 {"uts":"1410998171000","lng":"127.14022103","spd":"1.0","lat":"37.54799056","alt":"52.5","acc":"14.0"}
@@ -561,7 +560,7 @@ google.maps.event.addDomListener(window, 'load', initialize);
 {"uts":"1410998159000","lng":"127.14022215","spd":"1.0","lat":"37.54813577","alt":"51.400001525878906","acc":"11.0"}
 {"uts":"1410998160000","lng":"127.14022023","spd":"1.0","lat":"37.54811942","alt":"52.900001525878906","acc":"11.0"}
 {"uts":"1410998161000","lng":"127.14021817","spd":"1.0","lat":"37.54810405","alt":"53.5","acc":"11.0"}</textarea>
-    <button id="apply">Apply</button>
-  </body>
+<button id="apply">Apply</button>
+</body>
 </html>
 
