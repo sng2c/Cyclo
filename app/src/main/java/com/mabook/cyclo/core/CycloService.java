@@ -3,7 +3,6 @@ package com.mabook.cyclo.core;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Criteria;
@@ -12,26 +11,11 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
-import android.os.RemoteException;
+import android.os.ResultReceiver;
 import android.util.Log;
 
 import com.mabook.cyclo.R;
-
-import static com.mabook.cyclo.core.CycloConnector.MSG_PAUSE;
-import static com.mabook.cyclo.core.CycloConnector.MSG_RESUME;
-import static com.mabook.cyclo.core.CycloConnector.MSG_START;
-import static com.mabook.cyclo.core.CycloConnector.MSG_STATUS;
-import static com.mabook.cyclo.core.CycloConnector.MSG_STOP;
-import static com.mabook.cyclo.core.CycloConnector.MSG_UPDATE_PROFILE;
-import static com.mabook.cyclo.core.CycloConnector.STATE_NOT_ALLOWED;
-import static com.mabook.cyclo.core.CycloConnector.STATE_PAUSED;
-import static com.mabook.cyclo.core.CycloConnector.STATE_STARTED;
-import static com.mabook.cyclo.core.CycloConnector.STATE_STOPPED;
-
 
 public class CycloService extends Service {
 
@@ -59,12 +43,16 @@ public class CycloService extends Service {
                 sendBroadcast(type, null);
         }
     };
-    final Messenger mMessenger = new Messenger(new IncomingHandler());
     private final CycloProfile defaultProfile;
-    public int state = STATE_STOPPED;
-    Location lastLocation = null;
-    boolean paused = false;
-    LocationListener mDummyLocationListener = new LocationListener() {
+    public int mState = CycloManager.STATE_STOPPED;
+    private Bundle mCurrentControllerData;
+    private Location lastLocation = null;
+    private String mPackageName;
+    private String mAppName;
+    private LocationManager mLocationManager;
+    private CycloProfile mCurrentProfile;
+    private boolean mRestarting = false;
+    private LocationListener mDummyLocationListener = new LocationListener() {
         @Override
         public void onLocationChanged(Location location) {
         }
@@ -81,15 +69,7 @@ public class CycloService extends Service {
         public void onProviderDisabled(String s) {
         }
     };
-    private String mBroadcastAction;
-    private String mPackageName;
-    private String mAction;
-    private String mClassName;
-    private String mStartedBy;
-    private LocationManager mLocationManager;
-    private CycloProfile mCurrentProfile;
-    private boolean mRestarting = false;
-    LocationListener mLocationListener = new LocationListener() {
+    private LocationListener mLocationListener = new LocationListener() {
 
         @Override
         public void onLocationChanged(Location location) {
@@ -97,11 +77,11 @@ public class CycloService extends Service {
                 mLocationManager.removeUpdates(mDummyLocationListener);
                 mRestarting = false;
             }
-            if (state == STATE_PAUSED) { // PAUSED
+            if (mState == CycloManager.STATE_PAUSED) { // PAUSED
                 return;
             }
             if (location != null) {
-                Log.d(TAG, "location:" + CycloConnector.dumpLocation(location, lastLocation));
+                Log.d(TAG, "location:" + CycloManager.dumpLocation(location, lastLocation));
                 Bundle b = new Bundle();
                 b.putParcelable("location", location);
                 sendBroadcast("UPDATE", b);
@@ -130,6 +110,8 @@ public class CycloService extends Service {
     };
 
     public CycloService() {
+        super();
+
         Criteria criteria = new Criteria();
         criteria.setAccuracy(Criteria.ACCURACY_FINE);
         criteria.setPowerRequirement(Criteria.POWER_HIGH);
@@ -141,7 +123,74 @@ public class CycloService extends Service {
         defaultProfile = new CycloProfile();
         defaultProfile.setCriteria(criteria);
         defaultProfile.setMinTime(0);
-        defaultProfile.setMinDistance(0);
+        defaultProfile.setMinDistance(1);
+    }
+
+    private boolean canControl(String packageName) {
+        return packageName != null && (mPackageName == null || mPackageName.equals(packageName));
+    }
+
+    private void sendResult(ResultReceiver resultReceiver, int requestCode, int resultCode) {
+        if (resultReceiver != null) {
+            Bundle d = new Bundle(mCurrentControllerData);
+            d.putInt(CycloManager.KEY_STATE, mState);
+            d.putInt(CycloManager.KEY_RESULT, resultCode);
+            resultReceiver.send(requestCode, d);
+        }
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, intent.toString());
+
+        int requestCode = intent.getIntExtra(CycloManager.KEY_REQUEST_CODE, CycloManager.CONTROL_NOT_DEFINED);
+        ResultReceiver resultReceiver = intent.getParcelableExtra(CycloManager.KEY_RECEIVER);
+
+        String packageName = intent.getStringExtra(CycloManager.KEY_PACKAGE_NAME);
+        if (canControl(packageName)) {
+            switch (requestCode) {
+                case CycloManager.CONTROL_REQUEST:
+                    setControllerData(intent.getExtras());
+                    sendResult(resultReceiver, requestCode, CycloManager.RESULT_OK);
+                    break;
+                case CycloManager.CONTROL_START:
+                    doStart();
+                    sendResult(resultReceiver, requestCode, CycloManager.RESULT_OK);
+                    break;
+                case CycloManager.CONTROL_STOP:
+                    doStop();
+                    sendResult(resultReceiver, requestCode, CycloManager.RESULT_OK);
+                    break;
+                case CycloManager.CONTROL_PAUSE:
+                    doPause();
+                    sendResult(resultReceiver, requestCode, CycloManager.RESULT_OK);
+                    break;
+                case CycloManager.CONTROL_RESUME:
+                    doResume();
+                    sendResult(resultReceiver, requestCode, CycloManager.RESULT_OK);
+                    break;
+                case CycloManager.CONTROL_UPDATE_PROFILE:
+                    setControllerData(intent.getExtras());
+                    doUpdateProfile();
+                    sendResult(resultReceiver, requestCode, CycloManager.RESULT_OK);
+                    break;
+            }
+        } else {
+            if (resultReceiver != null)
+                sendResult(resultReceiver, requestCode, CycloManager.RESULT_NO);
+        }
+
+        return Service.START_STICKY;
+    }
+
+    private void setControllerData(Bundle data) {
+        mPackageName = data.getString(CycloManager.KEY_PACKAGE_NAME);
+        mAppName = data.getString(CycloManager.KEY_APP_NAME);
+        mCurrentProfile = data.getParcelable(CycloManager.KEY_PROFILE);
+
+        data.remove(CycloManager.KEY_RECEIVER);
+        data.remove(CycloManager.KEY_PROFILE);
+        mCurrentControllerData = data;
     }
 
     @Override
@@ -152,47 +201,9 @@ public class CycloService extends Service {
 
     }
 
-    void replyNotAllowed(Message msg) {
-        if (msg.replyTo != null) {
-            Message reply = new Message();
-            reply.what = MSG_STATUS;
-            Bundle b = new Bundle();
-            b.putInt("state", STATE_NOT_ALLOWED);
-            reply.setData(b);
-            try {
-                msg.replyTo.send(reply);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    void replyStatus(Message msg) {
-        if (msg.replyTo != null) {
-            Message reply = new Message();
-            reply.what = MSG_STATUS;
-            Bundle b = new Bundle();
-            b.putInt("state", state);
-            reply.setData(b);
-            try {
-                msg.replyTo.send(reply);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     void notifyForeground(String ticker, String text) {
         Intent actionIntent;
-        if (mAction != null) {
-            actionIntent = new Intent(mAction);
-        } else if (mClassName != null) {
-            actionIntent = new Intent();
-            actionIntent.setComponent(new ComponentName(mPackageName, mClassName));
-        } else {
-            actionIntent = getPackageManager().getLaunchIntentForPackage(mPackageName);
-        }
-//        actionIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        actionIntent = getPackageManager().getLaunchIntentForPackage(mPackageName);
 
         PendingIntent pintent = PendingIntent.getActivity(getApplicationContext(), 0, actionIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT
@@ -210,10 +221,10 @@ public class CycloService extends Service {
     }
 
     void sendBroadcast(String type, Bundle b) {
-        Intent broad = new Intent(mBroadcastAction);
-        if (b != null) broad.putExtras(b);
-        broad.putExtra("type", type);
-        sendBroadcast(broad);
+//        Intent broad = new Intent(mBroadcastAction);
+//        if (b != null) broad.putExtras(b);
+//        broad.putExtra("type", type);
+//        sendBroadcast(broad);
     }
 
     CycloProfile getCurrentProfile() {
@@ -245,6 +256,7 @@ public class CycloService extends Service {
 
     void stopLocationListening() {
         mLocationManager.removeUpdates(mLocationListener);
+        mLocationManager.removeGpsStatusListener(mGpsListener);
     }
 
     void safeRestartLocationListening() {
@@ -254,141 +266,69 @@ public class CycloService extends Service {
         startLocationListening("safeRestartLocationListening");
     }
 
-    void startLog(Bundle data) {
-        Log.d(TAG, "startLog");
-
-        mAction = data.getString("action", null);
-        mClassName = data.getString("className", null);
-        mPackageName = data.getString("packageName", null);
-        mStartedBy = data.getString("startedBy", null);
-        mBroadcastAction = data.getString("broadcastAction", null);
-        mCurrentProfile = data.getParcelable("profile");
+    void doStart() {
+        Log.d(TAG, "doStart");
 
         notifyForeground(getString(R.string.noti_ticker_start),
-                String.format(getString(R.string.noti_text_started_by), mStartedBy));
+                String.format(getString(R.string.noti_text_started_by), mAppName));
 
-        sendBroadcast("STARTED", null);
+        startLocationListening("doStart");
 
-        startLocationListening("startLog");
-
-        state = STATE_STARTED;
+        mState = CycloManager.STATE_STARTED;
     }
 
-    void updateProfile(Bundle data) {
+    void doUpdateProfile() {
 
-        Log.d(TAG, "updateProfile");
-
-        mCurrentProfile = data.getParcelable("profile");
-
-        sendBroadcast("UPDATE_PROFILE", null);
+        Log.d(TAG, "doUpdateProfile");
 
         safeRestartLocationListening();
 
-        state = STATE_STARTED;
+        mState = CycloManager.STATE_STARTED;
     }
 
-    void stopLog() {
-        Log.d(TAG, "stopLog");
+    void doStop() {
+        Log.d(TAG, "doStop");
 
         stopForeground(true);
 
-        sendBroadcast("STOPPED", null);
-
         stopLocationListening();
 
-        state = STATE_STOPPED;
+        mState = CycloManager.STATE_STOPPED;
 
         mPackageName = null;
         lastLocation = null;
     }
 
-    void pauseLog() {
-        Log.d(TAG, "stopLog");
+    void doPause() {
+        Log.d(TAG, "doPause");
 
         notifyForeground(getString(R.string.noti_ticker_pause),
-                String.format(getString(R.string.noti_text_paused_by), mStartedBy));
+                String.format(getString(R.string.noti_text_paused_by), mAppName));
 
-        sendBroadcast("PAUSED", null);
-
-        state = STATE_PAUSED;
+        mState = CycloManager.STATE_PAUSED;
         lastLocation = null;
     }
 
-    void resumeLog() {
-        Log.d(TAG, "stopLog");
+    void doResume() {
+        Log.d(TAG, "doResume");
 
         notifyForeground(getString(R.string.noti_ticker_resume),
-                String.format(getString(R.string.noti_text_started_by), mStartedBy));
+                String.format(getString(R.string.noti_text_started_by), mAppName));
 
-        sendBroadcast("RESUMED", null);
-
-        state = STATE_STARTED;
+        mState = CycloManager.STATE_STARTED;
     }
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        Log.d(TAG, "onBind");
-        return mMessenger.getBinder();
-    }
 
     @Override
     public void onDestroy() {
         Log.d(TAG, "onDestroy");
-        mLocationManager.removeGpsStatusListener(mGpsListener);
+
     }
 
-    boolean checkStarter(Bundle data) {
-        if (mPackageName == null) {
-            return true;
-        } else if (mPackageName.equals(data.getString("packageName"))) {
-            return true;
-        }
-        return false;
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
     }
 
-    class IncomingHandler extends Handler {
-
-        @Override
-        public void handleMessage(Message msg) {
-            if (checkStarter(msg.getData())) {
-                switch (msg.what) {
-                    case MSG_START:
-                        startLog(msg.getData());
-                        replyStatus(msg);
-                        break;
-                    case MSG_STOP:
-                        stopLog();
-                        replyStatus(msg);
-                        break;
-                    case MSG_PAUSE:
-                        pauseLog();
-                        replyStatus(msg);
-                        break;
-                    case MSG_RESUME:
-                        resumeLog();
-                        replyStatus(msg);
-                        break;
-                    case MSG_STATUS:
-                        replyStatus(msg);
-                        break;
-                    case MSG_UPDATE_PROFILE:
-                        updateProfile(msg.getData());
-                        replyStatus(msg);
-                        break;
-                    default:
-                        super.handleMessage(msg);
-                }
-            } else {
-                switch (msg.what) {
-                    case MSG_STATUS:
-                        replyStatus(msg);
-                        break;
-                    default:
-                        replyNotAllowed(msg);
-                }
-            }
-
-        }
-    }
 
 }

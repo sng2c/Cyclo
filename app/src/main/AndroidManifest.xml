@@ -13,7 +13,7 @@
             android:enabled="true"
             android:exported="true" >
             <intent-filter>
-                <action android:name="com.mabook.cyclo.core.CycloService.ACTION_BIND" />
+                <action android:name="com.mabook.cyclo.core.CycloService.ACTION_CONTROL" />
             </intent-filter>
         </service>
 

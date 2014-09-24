@@ -2,43 +2,66 @@ package com.mabook.cyclo;
 
 import android.app.Activity;
 import android.location.Criteria;
-import android.location.Location;
 import android.os.Bundle;
-import android.os.Environment;
+import android.os.Handler;
+import android.os.ResultReceiver;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import com.mabook.cyclo.core.CycloConnector;
+import com.mabook.cyclo.core.CycloManager;
 import com.mabook.cyclo.core.CycloProfile;
-
-import org.json.JSONObject;
-
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
 
 
 public class DashboardActivity extends Activity {
 
     private static final String TAG = "DashboardActivity";
-    Location lastLocation;
     private Button buttonStart;
     private Button buttonStop;
     private Button buttonPause;
     private Button buttonResume;
     private Button buttonUpdate;
     private TextView textUpdate;
-    private CycloConnector gpsConn;
+    private CycloManager cycloManager;
     private Spinner options;
-    private FileWriter mLogWriter;
+
+    private void updateButtons(int state) {
+        switch (state) {
+            case CycloManager.STATE_STOPPED:
+                buttonStart.setEnabled(true);
+                buttonStop.setEnabled(false);
+                buttonResume.setEnabled(false);
+                buttonPause.setEnabled(false);
+                options.setEnabled(true);
+                buttonUpdate.setEnabled(false);
+                break;
+            case CycloManager.STATE_STARTED:
+                buttonStart.setEnabled(false);
+                buttonStop.setEnabled(true);
+                buttonResume.setEnabled(false);
+                buttonPause.setEnabled(true);
+                options.setEnabled(true);
+                buttonUpdate.setEnabled(true);
+                break;
+            case CycloManager.STATE_PAUSED:
+                buttonStart.setEnabled(false);
+                buttonStop.setEnabled(true);
+                buttonResume.setEnabled(true);
+                buttonPause.setEnabled(false);
+                options.setEnabled(false);
+                buttonUpdate.setEnabled(false);
+                break;
+            default:
+                buttonStart.setEnabled(false);
+                buttonStop.setEnabled(false);
+                buttonResume.setEnabled(false);
+                buttonPause.setEnabled(false);
+                options.setEnabled(false);
+                buttonUpdate.setEnabled(false);
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,98 +76,35 @@ public class DashboardActivity extends Activity {
         options = (Spinner) findViewById(R.id.options);
         buttonUpdate = (Button) findViewById(R.id.button_update);
 
-        gpsConn = new CycloConnector(this, new CycloConnector.StatusListener() {
+        cycloManager = new CycloManager(this, new ResultReceiver(new Handler()) {
             @Override
-            public void onReceiveStatus(Bundle bundle) {
-                int state = bundle.getInt("state", CycloConnector.STATE_STOPPED);
-                Log.d(TAG, "state : " + state);
-                switch (state) {
-                    case CycloConnector.STATE_STOPPED:
-                        buttonStart.setEnabled(true);
-                        buttonStop.setEnabled(false);
-                        buttonResume.setEnabled(false);
-                        buttonPause.setEnabled(false);
-                        options.setEnabled(true);
-                        buttonUpdate.setEnabled(false);
-                        break;
-                    case CycloConnector.STATE_STARTED:
-                        buttonStart.setEnabled(false);
-                        buttonStop.setEnabled(true);
-                        buttonResume.setEnabled(false);
-                        buttonPause.setEnabled(true);
-                        options.setEnabled(true);
-                        buttonUpdate.setEnabled(true);
-                        break;
-                    case CycloConnector.STATE_PAUSED:
-                        buttonStart.setEnabled(false);
-                        buttonStop.setEnabled(true);
-                        buttonResume.setEnabled(true);
-                        buttonPause.setEnabled(false);
-                        options.setEnabled(false);
-                        buttonUpdate.setEnabled(false);
+            protected void onReceiveResult(int resultCode, Bundle resultData) {
+                int result = resultData.getInt(CycloManager.KEY_RESULT);
+                int state = resultData.getInt(CycloManager.KEY_STATE);
+
+                switch (resultCode) {
+                    case CycloManager.CONTROL_REQUEST:
+                        if (result == CycloManager.RESULT_OK) {
+                            Log.d(TAG, "SUCCESS TO CONTROL");
+                        } else {
+                            Log.d(TAG, "FAIL TO CONTROL");
+                        }
                         break;
                 }
 
-            }
-
-            @Override
-            public void onReceiveUpdate(Bundle bundle) {
-                textUpdate.setText(bundle.getString("type"));
-                Location location = bundle.getParcelable("location");
-                if (location != null) {
-                    textUpdate.setText(CycloConnector.dumpLocation(location, lastLocation));
-                    lastLocation = location;
-                    HashMap<String, String> map = new HashMap<String, String>();
-                    map.put("lat", String.valueOf(location.getLatitude()));
-                    map.put("lng", String.valueOf(location.getLongitude()));
-                    map.put("alt", String.valueOf(location.getAltitude()));
-                    map.put("spd", String.valueOf(location.getSpeed()));
-                    map.put("acc", String.valueOf(location.getAccuracy()));
-                    map.put("uts", String.valueOf(location.getTime()));
-
-                    JSONObject jobj = new JSONObject(map);
-                    try {
-                        mLogWriter.write(jobj.toString() + "\n");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
+                if (result == CycloManager.RESULT_OK) {
+                    updateButtons(state);
+                } else {
+                    updateButtons(0);
                 }
             }
         });
-
-    }
-
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.my, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        gpsConn.bindService();
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        gpsConn.unbindService();
+        cycloManager.requestControl();
     }
 
     public CycloProfile getProfile(int idx) {
@@ -197,86 +157,27 @@ public class DashboardActivity extends Activity {
     }
 
     public void onClickStart(View view) {
-        String name = (String) options.getSelectedItem();
         int pos = options.getSelectedItemPosition();
         CycloProfile profile = getProfile(pos);
-
-        // file open
-        name = name.replaceAll("\\s", "_");
-        File root = Environment.getExternalStorageDirectory();
-        File base = new File(root, "CycloDashboard");
-        if (!base.exists()) {
-            base.mkdir();
-        }
-
-        Date now = new Date();
-        SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd-HHmmss");
-
-        File logFile = new File(base, name + "-" + format.format(now) + ".txt");
-        try {
-            mLogWriter = new FileWriter(logFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        gpsConn.setProfile(profile);
-        gpsConn.start();
+        cycloManager.start(profile);
     }
 
     public void onClickStop(View view) {
-        gpsConn.stop();
-        // file close
-        if (mLogWriter != null) {
-            try {
-                mLogWriter.close();
-                mLogWriter = null;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        cycloManager.stop();
     }
 
     public void onClickUpdate(View view) {
-        String name = (String) options.getSelectedItem();
         int pos = options.getSelectedItemPosition();
         CycloProfile profile = getProfile(pos);
-
-        if (mLogWriter != null) {
-            try {
-                mLogWriter.close();
-                mLogWriter = null;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        // file open
-        name = name.replaceAll("\\s", "_");
-        File root = Environment.getExternalStorageDirectory();
-        File base = new File(root, "CycloDashboard");
-        if (!base.exists()) {
-            base.mkdir();
-        }
-
-        Date now = new Date();
-        SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd-HHmmss");
-
-        File logFile = new File(base, name + "-" + format.format(now) + ".txt");
-        try {
-            mLogWriter = new FileWriter(logFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        gpsConn.setProfile(profile);
-        gpsConn.updateProfile();
-        Log.d(TAG, "onClickUpdate");
+        cycloManager.updateProfile(profile);
     }
 
 
     public void onClickPause(View view) {
-        gpsConn.pause();
+        cycloManager.pause();
     }
 
     public void onClickResume(View view) {
-        gpsConn.resume();
+        cycloManager.resume();
     }
 }
