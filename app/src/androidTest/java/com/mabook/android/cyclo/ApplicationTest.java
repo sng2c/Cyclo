@@ -1,4 +1,4 @@
-package com.mabook.cyclo;
+package com.mabook.android.cyclo;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

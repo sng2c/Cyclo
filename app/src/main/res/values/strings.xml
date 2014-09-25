@@ -2,7 +2,7 @@
 <resources>
 
     <string name="app_name">Cyclo</string>
-    <string name="title_activity_dashboard">DashBoard</string>
+    <string name="title_activity_dashboard">Cyclo DashBoard</string>
     <string name="action_settings">Settings</string>
 
 </resources>

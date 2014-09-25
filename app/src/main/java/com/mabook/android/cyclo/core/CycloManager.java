@@ -1,4 +1,4 @@
-package com.mabook.cyclo.core;
+package com.mabook.android.cyclo.core;
 
 import android.content.Context;
 import android.content.Intent;
@@ -13,6 +13,7 @@ public class CycloManager {
     public static final String KEY_REQUEST_CODE = "KEY_REQUEST_CODE";
     public static final String KEY_RESULT = "KEY_RESULT";
     public static final String KEY_STATE = "KEY_STATE";
+    public static final String KEY_SESSION = "KEY_SESSION";
     public static final String KEY_PACKAGE_NAME = "KEY_PACKAGE_NAME";
     public static final String KEY_APP_NAME = "KEY_APP_NAME";
     public static final String KEY_PROFILE = "KEY_PROFILE";
@@ -26,19 +27,13 @@ public class CycloManager {
     public static final int CONTROL_PAUSE = 5;
     public static final int CONTROL_RESUME = 6;
     public static final int CONTROL_UPDATE_PROFILE = 7;
-
-    public static final String ACTION_CONTROL = "com.mabook.cyclo.core.CycloService.ACTION_CONTROL";
-
+    public static final String ACTION_CONTROL = "com.mabook.android.cyclo.core.CycloService.ACTION_CONTROL";
     public static final int STATE_STOPPED = 1;
     public static final int STATE_STARTED = 2;
     public static final int STATE_PAUSED = 3;
-    public static final int STATE_NOT_ALLOWED = 4;
-
     public static final int RESULT_NO = 0;
     public static final int RESULT_OK = 1;
     private static final String TAG = "CycloManager";
-
-
     private final Context mContext;
     private final Bundle mBaseBundle;
 
@@ -48,6 +43,53 @@ public class CycloManager {
         mBaseBundle.putString(KEY_PACKAGE_NAME, mContext.getPackageName());
         mBaseBundle.putString(KEY_APP_NAME, mContext.getString(mContext.getApplicationInfo().labelRes));
         mBaseBundle.putParcelable(KEY_RECEIVER, resultReceiver);
+    }
+
+    public static String getControlCodeString(int controlCode) {
+        switch (controlCode) {
+            case CONTROL_NOT_DEFINED:
+                return "CONTROL_NOT_DEFINED";
+            case CONTROL_REQUEST:
+                return "CONTROL_REQUEST";
+            case CONTROL_RELEASE:
+                return "CONTROL_RELEASE";
+            case CONTROL_START:
+                return "CONTROL_START";
+            case CONTROL_STOP:
+                return "CONTROL_STOP";
+            case CONTROL_PAUSE:
+                return "CONTROL_PAUSE";
+            case CONTROL_RESUME:
+                return "CONTROL_RESUME";
+            case CONTROL_UPDATE_PROFILE:
+                return "CONTROL_UPDATE_PROFILE";
+            default:
+                return "CONTROL_NOT_DEFINED";
+        }
+    }
+
+    public static String getStateCodeString(int stateCode) {
+        switch (stateCode) {
+            case STATE_STOPPED:
+                return "STATE_STOPPED";
+            case STATE_STARTED:
+                return "STATE_STARTED";
+            case STATE_PAUSED:
+                return "STATE_PAUSED";
+            default:
+                return "STATE_STOPPED";
+        }
+    }
+
+    public static String getResultCodeString(int resultCode) {
+        switch (resultCode) {
+            case RESULT_NO:
+                return "RESULT_NO";
+            case RESULT_OK:
+                return "RESULT_OK";
+            default:
+                return "RESULT_NO";
+        }
     }
 
     public static String dumpLocation(Location loc, Location lastLocation) {

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.mabook.cyclo" >
+    package="com.mabook.android.cyclo">
 
     <application
         android:allowBackup="true"
@@ -13,7 +13,7 @@
             android:enabled="true"
             android:exported="true" >
             <intent-filter>
-                <action android:name="com.mabook.cyclo.core.CycloService.ACTION_CONTROL" />
+                <action android:name="com.mabook.android.cyclo.core.CycloService.ACTION_CONTROL" />
             </intent-filter>
         </service>
 

@@ -1,4 +1,4 @@
-package com.mabook.cyclo.core;
+package com.mabook.android.cyclo.core;
 
 import android.app.Notification;
 import android.app.PendingIntent;
@@ -15,7 +15,7 @@ import android.os.IBinder;
 import android.os.ResultReceiver;
 import android.util.Log;
 
-import com.mabook.cyclo.R;
+import com.mabook.android.cyclo.R;
 
 public class CycloService extends Service {
 
@@ -45,6 +45,7 @@ public class CycloService extends Service {
     };
     private final CycloProfile defaultProfile;
     public int mState = CycloManager.STATE_STOPPED;
+    private CycloDatabase mDatabase;
     private Bundle mCurrentControllerData;
     private Location lastLocation = null;
     private String mPackageName;
@@ -52,6 +53,8 @@ public class CycloService extends Service {
     private LocationManager mLocationManager;
     private CycloProfile mCurrentProfile;
     private boolean mRestarting = false;
+    private long mSessionId = -1;
+
     private LocationListener mDummyLocationListener = new LocationListener() {
         @Override
         public void onLocationChanged(Location location) {
@@ -82,9 +85,9 @@ public class CycloService extends Service {
             }
             if (location != null) {
                 Log.d(TAG, "location:" + CycloManager.dumpLocation(location, lastLocation));
-                Bundle b = new Bundle();
-                b.putParcelable("location", location);
-                sendBroadcast("UPDATE", b);
+                if (mSessionId != -1) {
+                    long trackId = mDatabase.insertTrack(mSessionId, location.getAccuracy(), location.getLatitude(), location.getLongitude(), location.getAltitude(), location.getSpeed());
+                }
                 lastLocation = location;
             }
         }
@@ -109,6 +112,7 @@ public class CycloService extends Service {
         }
     };
 
+
     public CycloService() {
         super();
 
@@ -124,10 +128,23 @@ public class CycloService extends Service {
         defaultProfile.setCriteria(criteria);
         defaultProfile.setMinTime(0);
         defaultProfile.setMinDistance(1);
+
     }
 
+
     private boolean canControl(String packageName) {
-        return packageName != null && (mPackageName == null || mPackageName.equals(packageName));
+        if (mPackageName == null)
+            return true;
+
+        if (mState == CycloManager.STATE_STOPPED) {
+            return true;
+        }
+
+        if (mPackageName.equals(packageName)) {
+            return true;
+        }
+
+        return false;
     }
 
     private void sendResult(ResultReceiver resultReceiver, int requestCode, int resultCode) {
@@ -135,13 +152,21 @@ public class CycloService extends Service {
             Bundle d = new Bundle(mCurrentControllerData);
             d.putInt(CycloManager.KEY_STATE, mState);
             d.putInt(CycloManager.KEY_RESULT, resultCode);
+            d.putLong(CycloManager.KEY_SESSION, mSessionId);
             resultReceiver.send(requestCode, d);
         }
+        long id = mDatabase.insertControlLog(mPackageName, mAppName, CycloManager.getControlCodeString(requestCode),
+                CycloManager.getResultCodeString(resultCode));
+        Log.d(TAG, "ControlLog inserted #" + id);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, intent.toString());
+
+        if (mDatabase == null) {
+            mDatabase = new CycloDatabase(getApplicationContext());
+        }
 
         int requestCode = intent.getIntExtra(CycloManager.KEY_REQUEST_CODE, CycloManager.CONTROL_NOT_DEFINED);
         ResultReceiver resultReceiver = intent.getParcelableExtra(CycloManager.KEY_RECEIVER);
@@ -180,7 +205,7 @@ public class CycloService extends Service {
                 sendResult(resultReceiver, requestCode, CycloManager.RESULT_NO);
         }
 
-        return Service.START_STICKY;
+        return Service.START_NOT_STICKY;
     }
 
     private void setControllerData(Bundle data) {
@@ -273,6 +298,7 @@ public class CycloService extends Service {
                 String.format(getString(R.string.noti_text_started_by), mAppName));
 
         startLocationListening("doStart");
+        mSessionId = mDatabase.insertSession(mPackageName, mAppName, null);
 
         mState = CycloManager.STATE_STARTED;
     }
@@ -293,9 +319,12 @@ public class CycloService extends Service {
 
         stopLocationListening();
 
+        mDatabase.updateSessionStop(mSessionId);
+        mSessionId = -1;
+
         mState = CycloManager.STATE_STOPPED;
 
-        mPackageName = null;
+
         lastLocation = null;
     }
 
@@ -323,6 +352,8 @@ public class CycloService extends Service {
     public void onDestroy() {
         Log.d(TAG, "onDestroy");
 
+        if (mDatabase != null)
+            mDatabase.close();
     }
 
     @Override

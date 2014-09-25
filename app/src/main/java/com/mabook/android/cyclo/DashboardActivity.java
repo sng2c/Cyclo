@@ -1,4 +1,4 @@
-package com.mabook.cyclo;
+package com.mabook.android.cyclo;
 
 import android.app.Activity;
 import android.location.Criteria;
@@ -11,8 +11,8 @@ import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import com.mabook.cyclo.core.CycloManager;
-import com.mabook.cyclo.core.CycloProfile;
+import com.mabook.android.cyclo.core.CycloManager;
+import com.mabook.android.cyclo.core.CycloProfile;
 
 
 public class DashboardActivity extends Activity {
