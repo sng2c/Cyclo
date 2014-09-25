@@ -10,10 +10,18 @@ import android.os.ResultReceiver;
  * Created by sng2c on 2014. 9. 17..
  */
 public class CycloManager {
+    public static final String ACTION_CONTROL = "com.mabook.android.cyclo.core.CycloService.ACTION_CONTROL";
+    public static final String ACTION_BROADCAST = "com.mabook.android.cyclo.core.CycloService.ACTION_BROADCAST";
+
+    public static final String KEY_BROADCAST_ACTION = "KEY_BROADCAST_ACTION";
+    public static final String KEY_BROADCAST_TYPE = "KEY_BROADCAST_TYPE";
+    public static final String KEY_BROADCAST_SESSION = "KEY_BROADCAST_SESSION";
+    public static final String KEY_BROADCAST_TRACK = "KEY_BROADCAST_TRACK";
+    public static final String KEY_BROADCAST_LOCATION = "KEY_BROADCAST_LOCATION";
+
     public static final String KEY_REQUEST_CODE = "KEY_REQUEST_CODE";
     public static final String KEY_RESULT = "KEY_RESULT";
     public static final String KEY_STATE = "KEY_STATE";
-    public static final String KEY_SESSION = "KEY_SESSION";
     public static final String KEY_PACKAGE_NAME = "KEY_PACKAGE_NAME";
     public static final String KEY_APP_NAME = "KEY_APP_NAME";
     public static final String KEY_PROFILE = "KEY_PROFILE";
@@ -27,7 +35,7 @@ public class CycloManager {
     public static final int CONTROL_PAUSE = 5;
     public static final int CONTROL_RESUME = 6;
     public static final int CONTROL_UPDATE_PROFILE = 7;
-    public static final String ACTION_CONTROL = "com.mabook.android.cyclo.core.CycloService.ACTION_CONTROL";
+
     public static final int STATE_STOPPED = 1;
     public static final int STATE_STARTED = 2;
     public static final int STATE_PAUSED = 3;
@@ -93,6 +101,9 @@ public class CycloManager {
     }
 
     public static String dumpLocation(Location loc, Location lastLocation) {
+        if (loc == null) {
+            return null;
+        }
         StringBuilder sb = new StringBuilder();
         sb.append("ACC:").append(loc.getAccuracy()).append("m").append("\n")
                 .append("LAT:").append(loc.getLatitude()).append("\n")
@@ -123,9 +134,10 @@ public class CycloManager {
 //        mContext.startService(intent);
 //    }
 
-    public void start(CycloProfile profile) {
+    public void start(CycloProfile profile, String broadcastAction) {
         Intent intent = getControlIntent(CONTROL_START);
         intent.putExtra(KEY_PROFILE, profile);
+        intent.putExtra(KEY_BROADCAST_ACTION, broadcastAction);
         mContext.startService(intent);
     }
 

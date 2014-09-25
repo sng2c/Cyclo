@@ -1,7 +1,12 @@
 package com.mabook.android.cyclo;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.location.Criteria;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.ResultReceiver;
@@ -18,6 +23,18 @@ import com.mabook.android.cyclo.core.CycloProfile;
 public class DashboardActivity extends Activity {
 
     private static final String TAG = "DashboardActivity";
+    BroadcastReceiver receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Bundle extras = intent.getExtras();
+            String type = extras.getString(CycloManager.KEY_BROADCAST_TYPE);
+            long sessionId = extras.getLong(CycloManager.KEY_BROADCAST_SESSION);
+            long trackId = extras.getLong(CycloManager.KEY_BROADCAST_TRACK);
+            Location location = extras.getParcelable(CycloManager.KEY_BROADCAST_LOCATION);
+
+            textUpdate.setText(type + "\nsessionId:" + sessionId + "\ntrackId:" + trackId + "\nlocation:" + CycloManager.dumpLocation(location, null));
+        }
+    };
     private Button buttonStart;
     private Button buttonStop;
     private Button buttonPause;
@@ -76,6 +93,7 @@ public class DashboardActivity extends Activity {
         options = (Spinner) findViewById(R.id.options);
         buttonUpdate = (Button) findViewById(R.id.button_update);
 
+
         cycloManager = new CycloManager(this, new ResultReceiver(new Handler()) {
             @Override
             protected void onReceiveResult(int resultCode, Bundle resultData) {
@@ -105,6 +123,13 @@ public class DashboardActivity extends Activity {
     protected void onStart() {
         super.onStart();
         cycloManager.requestControl();
+        registerReceiver(receiver, new IntentFilter(CycloManager.ACTION_BROADCAST));
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(receiver);
     }
 
     public CycloProfile getProfile(int idx) {
@@ -159,7 +184,7 @@ public class DashboardActivity extends Activity {
     public void onClickStart(View view) {
         int pos = options.getSelectedItemPosition();
         CycloProfile profile = getProfile(pos);
-        cycloManager.start(profile);
+        cycloManager.start(profile, null);
     }
 
     public void onClickStop(View view) {

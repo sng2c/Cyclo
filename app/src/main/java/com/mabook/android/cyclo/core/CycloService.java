@@ -45,6 +45,7 @@ public class CycloService extends Service {
     };
     private final CycloProfile defaultProfile;
     public int mState = CycloManager.STATE_STOPPED;
+    public long mLastTrackId = -1;
     private CycloDatabase mDatabase;
     private Bundle mCurrentControllerData;
     private Location lastLocation = null;
@@ -54,6 +55,8 @@ public class CycloService extends Service {
     private CycloProfile mCurrentProfile;
     private boolean mRestarting = false;
     private long mSessionId = -1;
+    private String mBroadcastAction;
+
 
     private LocationListener mDummyLocationListener = new LocationListener() {
         @Override
@@ -84,9 +87,14 @@ public class CycloService extends Service {
                 return;
             }
             if (location != null) {
-                Log.d(TAG, "location:" + CycloManager.dumpLocation(location, lastLocation));
                 if (mSessionId != -1) {
-                    long trackId = mDatabase.insertTrack(mSessionId, location.getAccuracy(), location.getLatitude(), location.getLongitude(), location.getAltitude(), location.getSpeed());
+                    Log.d(TAG, "location:" + CycloManager.dumpLocation(location, lastLocation));
+
+                    mLastTrackId = mDatabase.insertTrack(mSessionId, location.getAccuracy(), location.getLatitude(), location.getLongitude(), location.getAltitude(), location.getSpeed());
+
+                    Bundle b = new Bundle();
+                    b.putParcelable(CycloManager.KEY_BROADCAST_LOCATION, location);
+                    sendBroadcast("UPDATE", b);
                 }
                 lastLocation = location;
             }
@@ -96,22 +104,18 @@ public class CycloService extends Service {
         public void onStatusChanged(String s, int i, Bundle bundle) {
             Log.d(TAG, "provider:" + s + ", " + i);
             Log.d(TAG, "provider bundle:" + bundle.toString());
-            sendBroadcast("UPDATE_PROVIDER!" + s, null);
         }
 
         @Override
         public void onProviderEnabled(String s) {
             Log.d(TAG, "provider+:" + s);
-            sendBroadcast("UPDATE_PROVIDER+" + s, null);
         }
 
         @Override
         public void onProviderDisabled(String s) {
             Log.d(TAG, "provider-:" + s);
-            sendBroadcast("UPDATE_PROVIDER-" + s, null);
         }
     };
-
 
     public CycloService() {
         super();
@@ -128,7 +132,6 @@ public class CycloService extends Service {
         defaultProfile.setCriteria(criteria);
         defaultProfile.setMinTime(0);
         defaultProfile.setMinDistance(1);
-
     }
 
 
@@ -152,7 +155,7 @@ public class CycloService extends Service {
             Bundle d = new Bundle(mCurrentControllerData);
             d.putInt(CycloManager.KEY_STATE, mState);
             d.putInt(CycloManager.KEY_RESULT, resultCode);
-            d.putLong(CycloManager.KEY_SESSION, mSessionId);
+            d.putLong(CycloManager.KEY_BROADCAST_SESSION, mSessionId);
             resultReceiver.send(requestCode, d);
         }
         long id = mDatabase.insertControlLog(mPackageName, mAppName, CycloManager.getControlCodeString(requestCode),
@@ -213,6 +216,13 @@ public class CycloService extends Service {
         mAppName = data.getString(CycloManager.KEY_APP_NAME);
         mCurrentProfile = data.getParcelable(CycloManager.KEY_PROFILE);
 
+        String broadcast = data.getString(CycloManager.KEY_BROADCAST_ACTION);
+        if (broadcast != null) {
+            mBroadcastAction = broadcast;
+        } else {
+            mBroadcastAction = CycloManager.ACTION_BROADCAST;
+        }
+
         data.remove(CycloManager.KEY_RECEIVER);
         data.remove(CycloManager.KEY_PROFILE);
         mCurrentControllerData = data;
@@ -246,10 +256,12 @@ public class CycloService extends Service {
     }
 
     void sendBroadcast(String type, Bundle b) {
-//        Intent broad = new Intent(mBroadcastAction);
-//        if (b != null) broad.putExtras(b);
-//        broad.putExtra("type", type);
-//        sendBroadcast(broad);
+        Intent broad = new Intent(mBroadcastAction);
+        if (b != null) broad.putExtras(b);
+        broad.putExtra(CycloManager.KEY_BROADCAST_TYPE, type);
+        broad.putExtra(CycloManager.KEY_BROADCAST_SESSION, mSessionId);
+        broad.putExtra(CycloManager.KEY_BROADCAST_TRACK, mLastTrackId);
+        sendBroadcast(broad);
     }
 
     CycloProfile getCurrentProfile() {
@@ -321,6 +333,7 @@ public class CycloService extends Service {
 
         mDatabase.updateSessionStop(mSessionId);
         mSessionId = -1;
+        mLastTrackId = -1;
 
         mState = CycloManager.STATE_STOPPED;
 
