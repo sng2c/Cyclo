@@ -56,6 +56,10 @@ public class CycloDatabase {
         return mDatabase.insert(TABLE_SESSION, null, values);
     }
 
+    public SQLiteDatabase getDatabase() {
+        return mDatabase;
+    }
+
     public int updateSessionStop(long sessionId) {
         ContentValues values = new ContentValues();
         values.put("end_time", getDateTime());

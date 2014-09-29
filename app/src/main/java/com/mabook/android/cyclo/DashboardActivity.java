@@ -5,8 +5,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
 import android.location.Criteria;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.ResultReceiver;
@@ -117,6 +119,22 @@ public class DashboardActivity extends Activity {
                 }
             }
         });
+
+        Uri curi = Uri.parse("content://" + CycloManager.AUTHORITY + "/session");
+        Cursor cursor = getContentResolver().query(curi, CycloManager.SESSION_FIELD_ALL, null, null, null);
+        while (cursor.moveToNext()) {
+            int id = cursor.getInt(0);
+            Log.d(TAG, "session_id : " + id);
+            Uri curi2 = Uri.parse("content://" + CycloManager.AUTHORITY + "/session/" + id + "/track");
+            Cursor cursor2 = getContentResolver().query(curi2, CycloManager.TRACK_FIELD_ALL, null, null, null);
+            while (cursor2.moveToNext()) {
+                double lat = cursor2.getDouble(4);
+                double lng = cursor2.getDouble(5);
+                Log.d(TAG, "   lat:" + lat + ", lng:" + lng);
+            }
+        }
+
+
     }
 
     @Override
@@ -178,6 +196,7 @@ public class DashboardActivity extends Activity {
                 profile.setMinDistance(1);
                 break;
         }
+
         return profile;
     }
 
