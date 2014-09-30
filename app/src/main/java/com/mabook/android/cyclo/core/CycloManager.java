@@ -6,6 +6,8 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.ResultReceiver;
 
+import com.mabook.android.cyclo.core.data.CycloProfile;
+
 /**
  * Created by sng2c on 2014. 9. 17..
  */
@@ -38,11 +40,11 @@ public class CycloManager {
     public static final String TRACK_FIELD_ALTITUDE = "alt";
     public static final String TRACK_FIELD_SPEED = "speed";
     public static final String[] TRACK_FIELD_ALL = new String[]{
-            TRACK_FIELD_ID,
+            TRACK_FIELD_ID,             // 0
             TRACK_FIELD_SESSION_ID,
             TRACK_FIELD_REGTIME,
             TRACK_FIELD_ACCURACY,
-            TRACK_FIELD_LATITUDE,
+            TRACK_FIELD_LATITUDE,       // 4
             TRACK_FIELD_LONGITUDE,
             TRACK_FIELD_ALTITUDE,
             TRACK_FIELD_SPEED

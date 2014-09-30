@@ -5,6 +5,7 @@ import android.content.ContentValues;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.net.Uri;
+import android.util.Log;
 
 import java.util.List;
 
@@ -14,6 +15,7 @@ public class CycloContentProvider extends ContentProvider {
     private final static int URI_SESSION_ONE = 2;
     private final static int URI_TRACK_ALL = 3;
     private final static int URI_TRACK_ONE = 4;
+    private static final String TAG = "CycloContentProvider";
     private final UriMatcher mUriMatcher;
     private CycloDatabase mDB;
 
@@ -27,9 +29,20 @@ public class CycloContentProvider extends ContentProvider {
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
-        // Implement this to handle requests to delete one or more rows.
-        throw new UnsupportedOperationException("Not yet implemented");
-
+        switch (mUriMatcher.match(uri)) {
+            case URI_SESSION_ALL:
+                return 0;
+            case URI_SESSION_ONE:
+                String[] id = new String[]{uri.getLastPathSegment()};
+                mDB.getDatabase().delete(CycloDatabase.TABLE_TRACK, CycloManager.TRACK_FIELD_SESSION_ID + " = ?", id);
+                return mDB.getDatabase().delete(CycloDatabase.TABLE_SESSION, CycloManager.SESSION_FIELD_ID + " = ?", id);
+            case URI_TRACK_ALL:
+                return 0;
+            case URI_TRACK_ONE:
+                return 0;
+            default:
+                return 0;
+        }
         // 세션의 삭제만 허용한다.
     }
 
@@ -78,6 +91,9 @@ public class CycloContentProvider extends ContentProvider {
                 segs = uri.getPathSegments(); // session/#/track
                 selection = CycloManager.TRACK_FIELD_SESSION_ID + " = ?";
                 selectionArgs = new String[]{segs.get(1)};
+                for (String s : segs) {
+                    Log.d(TAG, "segs: " + s);
+                }
                 return mDB.getDatabase().query(CycloDatabase.TABLE_TRACK, projection, selection, selectionArgs, null, null, sortOrder);
             case URI_TRACK_ONE:
                 segs = uri.getPathSegments(); // session/#/track/#
@@ -92,10 +108,21 @@ public class CycloContentProvider extends ContentProvider {
     @Override
     public int update(Uri uri, ContentValues values, String selection,
                       String[] selectionArgs) {
-        // TODO: Implement this to handle requests to update one or more rows.
-
-        // 세션이름의 업데이트만 허용한다.
-
-        throw new UnsupportedOperationException("Not yet implemented");
+        switch (mUriMatcher.match(uri)) {
+            case URI_SESSION_ALL:
+                return 0;
+            case URI_SESSION_ONE:
+                String[] id = new String[]{uri.getLastPathSegment()};
+                String sessionName = values.getAsString(CycloManager.SESSION_FIELD_SESSION_NAME);
+                ContentValues v = new ContentValues();
+                v.put(CycloManager.SESSION_FIELD_SESSION_NAME, sessionName);
+                return mDB.getDatabase().update(CycloDatabase.TABLE_SESSION, v, CycloManager.SESSION_FIELD_ID + " = ?", id);
+            case URI_TRACK_ALL:
+                return 0;
+            case URI_TRACK_ONE:
+                return 0;
+            default:
+                return 0;
+        }
     }
 }

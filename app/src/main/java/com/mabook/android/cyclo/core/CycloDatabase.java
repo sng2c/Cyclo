@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -22,7 +23,7 @@ public class CycloDatabase {
     public static String TABLE_CONTROL_LOG = "CONTROL_LOG";
     public static String TABLE_SESSION = "SESSION";
     public static String TABLE_TRACK = "TRACK";
-
+    private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
     private final Context mContext;
     private final SQLiteDatabase mDatabase;
 
@@ -32,11 +33,25 @@ public class CycloDatabase {
         mDatabase = opener.getWritableDatabase();
     }
 
-    private String getDateTime() {
+    public static String getNowString() {
         SimpleDateFormat dateFormat = new SimpleDateFormat(
                 "yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         Date date = new Date();
         return dateFormat.format(date);
+    }
+
+    public static String getDateTimeString(Date date) {
+        return dateFormat.format(date);
+    }
+
+    public static Date getDateTimeDate(String dateString) {
+        Date date = null;
+        try {
+            date = dateFormat.parse(dateString);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return date;
     }
 
     public long insertControlLog(String packageName, String appName, String message, String result) {
@@ -45,7 +60,7 @@ public class CycloDatabase {
         values.put("app_name", appName);
         values.put("message", message);
         values.put("result", result);
-        values.put("regtime", getDateTime());
+        values.put("regtime", getNowString());
         return mDatabase.insert(TABLE_CONTROL_LOG, null, values);
     }
 
@@ -54,7 +69,7 @@ public class CycloDatabase {
         values.put("package_name", packageName);
         values.put("app_name", appName);
         values.put("session_name", sessionName);
-        values.put("start_time", getDateTime());
+        values.put("start_time", getNowString());
         return mDatabase.insert(TABLE_SESSION, null, values);
     }
 
@@ -64,20 +79,20 @@ public class CycloDatabase {
 
     public int updateSessionStop(long sessionId) {
         ContentValues values = new ContentValues();
-        values.put("end_time", getDateTime());
-        return mDatabase.update(TABLE_SESSION, values, "session_id = ?", new String[]{String.valueOf(sessionId)});
+        values.put("end_time", getNowString());
+        return mDatabase.update(TABLE_SESSION, values, CycloManager.SESSION_FIELD_ID + " = ?", new String[]{String.valueOf(sessionId)});
     }
 
     public int updateSessionName(int sessionId, String sessionName) {
         ContentValues values = new ContentValues();
         values.put("session_name", sessionName);
-        return mDatabase.update(TABLE_SESSION, values, "session_id = ?", new String[]{String.valueOf(sessionId)});
+        return mDatabase.update(TABLE_SESSION, values, CycloManager.SESSION_FIELD_ID + " = ?", new String[]{String.valueOf(sessionId)});
     }
 
     public long insertTrack(long sessionId, double acc, double lat, double lng, double alt, double speed) {
         ContentValues values = new ContentValues();
         values.put("session_id", sessionId);
-        values.put("regtime", getDateTime());
+        values.put("regtime", getNowString());
         values.put("acc", acc);
         values.put("lat", lat);
         values.put("lng", lng);

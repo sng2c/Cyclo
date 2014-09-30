@@ -16,6 +16,7 @@ import android.os.ResultReceiver;
 import android.util.Log;
 
 import com.mabook.android.cyclo.R;
+import com.mabook.android.cyclo.core.data.CycloProfile;
 
 public class CycloService extends Service {
 

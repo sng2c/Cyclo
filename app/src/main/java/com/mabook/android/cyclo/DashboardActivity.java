@@ -1,8 +1,11 @@
 package com.mabook.android.cyclo;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
+import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
@@ -12,17 +15,21 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.ResultReceiver;
+import android.text.Editable;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CursorAdapter;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.mabook.android.cyclo.core.CycloManager;
-import com.mabook.android.cyclo.core.CycloProfile;
+import com.mabook.android.cyclo.core.data.CycloProfile;
+import com.mabook.android.cyclo.core.data.CycloSession;
 
 
 public class DashboardActivity extends Activity {
@@ -48,6 +55,8 @@ public class DashboardActivity extends Activity {
     private TextView textUpdate;
     private CycloManager cycloManager;
     private Spinner options;
+    private CursorAdapter mCursorAdapter;
+    private ListView mListView;
 
     private void updateButtons(int state) {
         switch (state) {
@@ -83,6 +92,7 @@ public class DashboardActivity extends Activity {
                 options.setEnabled(false);
                 buttonUpdate.setEnabled(false);
         }
+        updateList();
     }
 
     @Override
@@ -123,47 +133,131 @@ public class DashboardActivity extends Activity {
             }
         });
 
+        updateList();
+    }
+
+    void updateList() {
         Uri curi = Uri.parse("content://" + CycloManager.AUTHORITY + "/session");
         Cursor cursor = getContentResolver().query(curi, CycloManager.SESSION_FIELD_ALL, null, null, null);
 
-        CursorAdapter ca = new CursorAdapter(this, cursor, CursorAdapter.FLAG_REGISTER_CONTENT_OBSERVER) {
-            @Override
-            public View newView(Context context, Cursor cursor, ViewGroup viewGroup) {
-                Log.d(TAG, "viewGroup:" + viewGroup);
-                View view = View.inflate(context, android.R.layout.simple_list_item_2, null);
-                ViewHolder vh = new ViewHolder();
-                vh.tv1 = (TextView) view.findViewById(android.R.id.text1);
-                vh.tv2 = (TextView) view.findViewById(android.R.id.text2);
-                view.setTag(vh);
-                return view;
-            }
-
-            @Override
-            public void bindView(View view, Context context, Cursor cursor) {
-
-                String app = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_APP_NAME));
-                String sess = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_SESSION_NAME));
-                if (sess == null) {
-                    sess = "Noname";
+        if (mCursorAdapter != null) {
+            mCursorAdapter.changeCursor(cursor);
+        } else {
+            mCursorAdapter = new CursorAdapter(this, cursor, CursorAdapter.FLAG_REGISTER_CONTENT_OBSERVER) {
+                @Override
+                public View newView(Context context, Cursor cursor, ViewGroup viewGroup) {
+                    Log.d(TAG, "viewGroup:" + viewGroup);
+                    View view = View.inflate(context, android.R.layout.simple_list_item_2, null);
+                    ViewHolder vh = new ViewHolder();
+                    vh.tv1 = (TextView) view.findViewById(android.R.id.text1);
+                    vh.tv2 = (TextView) view.findViewById(android.R.id.text2);
+                    view.setTag(vh);
+                    return view;
                 }
-                String start = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_START_TIME));
-                String end = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_END_TIME));
-                ViewHolder vh = (ViewHolder) view.getTag();
-                if (vh != null) {
-                    vh.tv1.setText(sess + " from " + app);
-                    vh.tv2.setText(start + "~" + end);
+
+                @Override
+                public void bindView(View view, Context context, Cursor cursor) {
+                    String app = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_APP_NAME));
+                    String sess = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_SESSION_NAME));
+                    if (sess == null) {
+                        sess = "Noname";
+                    }
+                    String start = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_START_TIME));
+                    String end = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_END_TIME));
+                    ViewHolder vh = (ViewHolder) view.getTag();
+                    if (vh != null) {
+                        vh.tv1.setText(sess + " from " + app);
+                        vh.tv2.setText(start + "~" + end);
+                    }
+                    CycloSession session = new CycloSession(
+                            cursor.getLong(cursor.getColumnIndex(CycloManager.SESSION_FIELD_ID)),
+                            cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_PACKAGE_NAME)),
+                            cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_APP_NAME)),
+                            cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_SESSION_NAME)),
+                            cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_START_TIME)),
+                            cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_END_TIME))
+                    );
+                    view.setTag(R.id.session_object, session);
                 }
-            }
 
-            class ViewHolder {
-                TextView tv1;
-                TextView tv2;
-            }
-        };
+                class ViewHolder {
+                    TextView tv1;
+                    TextView tv2;
+                }
+            };
 
 
-        ListView lv = (ListView) findViewById(R.id.listView);
-        lv.setAdapter(ca);
+            mListView = (ListView) findViewById(R.id.listView);
+            mListView.setAdapter(mCursorAdapter);
+            mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                    CycloSession session = (CycloSession) view.getTag(R.id.session_object);
+                    Log.d(TAG, "session:" + session);
+                    Intent intent = new Intent(DashboardActivity.this, MapsActivity.class);
+                    intent.putExtra("session", session);
+                    startActivity(intent);
+                }
+            });
+            mListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+                @Override
+                public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
+                    AlertDialog.Builder b = new AlertDialog.Builder(DashboardActivity.this);
+                    b.setTitle("Action");
+                    String[] actions = {"Rename", "Delete"};
+                    final CycloSession session = (CycloSession) view.getTag(R.id.session_object);
+                    b.setItems(actions, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            if (i == 0) {
+                                final EditText input = new EditText(DashboardActivity.this);
+                                input.setText(session.getSessionName());
+                                new AlertDialog.Builder(DashboardActivity.this)
+                                        .setTitle("Update Status")
+                                        .setMessage("Rename")
+                                        .setView(input)
+                                        .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                            public void onClick(DialogInterface dialog, int whichButton) {
+                                                Editable value = input.getText();
+                                                Uri curi = Uri.parse("content://" + CycloManager.AUTHORITY + "/session/" + session.getId());
+                                                ContentValues v = new ContentValues();
+                                                v.put(CycloManager.SESSION_FIELD_SESSION_NAME, value.toString());
+                                                getContentResolver().update(curi, v, null, null);
+                                                updateList();
+                                            }
+                                        }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialog, int whichButton) {
+                                        // Do nothing.
+                                    }
+                                }).show();
+                            } else if (i == 1) {
+                                new AlertDialog.Builder(DashboardActivity.this)
+                                        .setTitle("Delete Session")
+                                        .setMessage("Delete")
+                                        .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                            public void onClick(DialogInterface dialog, int whichButton) {
+                                                Uri curi = Uri.parse("content://" + CycloManager.AUTHORITY + "/session/" + session.getId());
+                                                int deleted = getContentResolver().delete(curi, null, null);
+                                                if (deleted > 0) {
+                                                    updateList();
+                                                }
+                                            }
+                                        }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialog, int whichButton) {
+                                        // Do nothing.
+                                    }
+                                }).show();
+
+
+                            }
+                        }
+                    });
+                    b.show();
+                    return true;
+                }
+            });
+
+        }
     }
 
     @Override

@@ -1,4 +1,4 @@
-package com.mabook.android.cyclo.core;
+package com.mabook.android.cyclo.core.data;
 
 import android.location.Criteria;
 import android.os.Parcel;
