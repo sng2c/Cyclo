@@ -14,7 +14,7 @@ public class CycloManager {
     public static final String ACTION_BROADCAST = "com.mabook.android.cyclo.core.CycloService.ACTION_BROADCAST";
     public static final String AUTHORITY = "com.mabook.android.cyclo.provider";
 
-    public static final String SESSION_FIELD_ID = "session_id";
+    public static final String SESSION_FIELD_ID = "_id";
     public static final String SESSION_FIELD_PACKAGE_NAME = "package_name";
     public static final String SESSION_FIELD_APP_NAME = "app_name";
     public static final String SESSION_FIELD_SESSION_NAME = "session_name";
@@ -29,7 +29,7 @@ public class CycloManager {
             SESSION_FIELD_END_TIME
     };
 
-    public static final String TRACK_FIELD_ID = "track_id";
+    public static final String TRACK_FIELD_ID = "_id";
     public static final String TRACK_FIELD_SESSION_ID = "session_id";
     public static final String TRACK_FIELD_REGTIME = "regtime";
     public static final String TRACK_FIELD_ACCURACY = "acc";

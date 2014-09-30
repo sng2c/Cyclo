@@ -14,7 +14,10 @@ import android.os.Handler;
 import android.os.ResultReceiver;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CursorAdapter;
+import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -122,19 +125,45 @@ public class DashboardActivity extends Activity {
 
         Uri curi = Uri.parse("content://" + CycloManager.AUTHORITY + "/session");
         Cursor cursor = getContentResolver().query(curi, CycloManager.SESSION_FIELD_ALL, null, null, null);
-        while (cursor.moveToNext()) {
-            int id = cursor.getInt(0);
-            Log.d(TAG, "session_id : " + id);
-            Uri curi2 = Uri.parse("content://" + CycloManager.AUTHORITY + "/session/" + id + "/track");
-            Cursor cursor2 = getContentResolver().query(curi2, CycloManager.TRACK_FIELD_ALL, null, null, null);
-            while (cursor2.moveToNext()) {
-                double lat = cursor2.getDouble(4);
-                double lng = cursor2.getDouble(5);
-                Log.d(TAG, "   lat:" + lat + ", lng:" + lng);
+
+        CursorAdapter ca = new CursorAdapter(this, cursor, CursorAdapter.FLAG_REGISTER_CONTENT_OBSERVER) {
+            @Override
+            public View newView(Context context, Cursor cursor, ViewGroup viewGroup) {
+                Log.d(TAG, "viewGroup:" + viewGroup);
+                View view = View.inflate(context, android.R.layout.simple_list_item_2, null);
+                ViewHolder vh = new ViewHolder();
+                vh.tv1 = (TextView) view.findViewById(android.R.id.text1);
+                vh.tv2 = (TextView) view.findViewById(android.R.id.text2);
+                view.setTag(vh);
+                return view;
             }
-        }
+
+            @Override
+            public void bindView(View view, Context context, Cursor cursor) {
+
+                String app = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_APP_NAME));
+                String sess = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_SESSION_NAME));
+                if (sess == null) {
+                    sess = "Noname";
+                }
+                String start = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_START_TIME));
+                String end = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_END_TIME));
+                ViewHolder vh = (ViewHolder) view.getTag();
+                if (vh != null) {
+                    vh.tv1.setText(sess + " from " + app);
+                    vh.tv2.setText(start + "~" + end);
+                }
+            }
+
+            class ViewHolder {
+                TextView tv1;
+                TextView tv2;
+            }
+        };
 
 
+        ListView lv = (ListView) findViewById(R.id.listView);
+        lv.setAdapter(ca);
     }
 
     @Override

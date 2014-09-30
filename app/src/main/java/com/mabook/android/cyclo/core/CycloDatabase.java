@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -14,7 +15,8 @@ import java.util.Locale;
  */
 
 public class CycloDatabase {
-    public static int DATABASE_VERSION = 1;
+    private static final String TAG = "CycloDatabase";
+    public static int DATABASE_VERSION = 2;
     public static String DATABASE_NAME = "Cyclo";
 
     public static String TABLE_CONTROL_LOG = "CONTROL_LOG";
@@ -95,14 +97,28 @@ public class CycloDatabase {
 
         @Override
         public void onCreate(SQLiteDatabase sqLiteDatabase) {
-            sqLiteDatabase.execSQL("CREATE TABLE \"CONTROL_LOG\" (\"log_id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , \"package_name\" VARCHAR, \"app_name\" VARCHAR, \"message\" VARCHAR, \"result\" VARCHAR, \"regtime\" DATETIME)");
-            sqLiteDatabase.execSQL("CREATE TABLE \"SESSION\" (\"session_id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , \"package_name\" VARCHAR, \"app_name\" VARCHAR, \"session_name\" VARCHAR, \"start_time\" DATETIME, \"end_time\" DATETIME)");
-            sqLiteDatabase.execSQL("CREATE TABLE \"TRACK\" (\"track_id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , \"session_id\" INTEGER, \"regtime\" DATETIME, \"acc\" DOUBLE, \"lat\" DOUBLE, \"lng\" DOUBLE, \"alt\" DOUBLE, \"speed\" DOUBLE)");
+            sqLiteDatabase.execSQL("CREATE TABLE \"CONTROL_LOG\" (\"_id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , \"package_name\" VARCHAR, \"app_name\" VARCHAR, \"message\" VARCHAR, \"result\" VARCHAR, \"regtime\" DATETIME)");
+            sqLiteDatabase.execSQL("CREATE TABLE \"SESSION\" (\"_id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , \"package_name\" VARCHAR, \"app_name\" VARCHAR, \"session_name\" VARCHAR, \"start_time\" DATETIME, \"end_time\" DATETIME)");
+            sqLiteDatabase.execSQL("CREATE TABLE \"TRACK\" (\"_id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , \"session_id\" INTEGER, \"regtime\" DATETIME, \"acc\" DOUBLE, \"lat\" DOUBLE, \"lng\" DOUBLE, \"alt\" DOUBLE, \"speed\" DOUBLE)");
         }
 
         @Override
         public void onUpgrade(SQLiteDatabase sqLiteDatabase, int oldVersion, int newVersion) {
-            // nothing yet
+            Log.d(TAG, "onUpgrade " + oldVersion + " => " + newVersion);
+            if (oldVersion <= 1) {
+                sqLiteDatabase.execSQL("ALTER TABLE \"main\".\"CONTROL_LOG\" RENAME TO \"oXHFcGcd04oXHFcGcd04_CONTROL_LOG\"");
+                sqLiteDatabase.execSQL("CREATE TABLE \"main\".\"CONTROL_LOG\" (\"_id\" INTEGER PRIMARY KEY  NOT NULL  DEFAULT (null) ,\"package_name\" VARCHAR,\"app_name\" VARCHAR,\"message\" VARCHAR,\"result\" VARCHAR,\"regtime\" DATETIME)");
+                sqLiteDatabase.execSQL("INSERT INTO \"main\".\"CONTROL_LOG\" SELECT \"log_id\",\"package_name\",\"app_name\",\"message\",\"result\",\"regtime\" FROM \"main\".\"oXHFcGcd04oXHFcGcd04_CONTROL_LOG\"");
+                sqLiteDatabase.execSQL("DROP TABLE \"main\".\"oXHFcGcd04oXHFcGcd04_CONTROL_LOG\"");
+                sqLiteDatabase.execSQL("ALTER TABLE \"main\".\"SESSION\" RENAME TO \"oXHFcGcd04oXHFcGcd04_SESSION\"");
+                sqLiteDatabase.execSQL("CREATE TABLE \"main\".\"SESSION\" (\"_id\" INTEGER PRIMARY KEY  NOT NULL  DEFAULT (null) ,\"package_name\" VARCHAR,\"app_name\" VARCHAR,\"session_name\" VARCHAR,\"start_time\" DATETIME,\"end_time\" DATETIME)");
+                sqLiteDatabase.execSQL("INSERT INTO \"main\".\"SESSION\" SELECT \"session_id\",\"package_name\",\"app_name\",\"session_name\",\"start_time\",\"end_time\" FROM \"main\".\"oXHFcGcd04oXHFcGcd04_SESSION\"");
+                sqLiteDatabase.execSQL("DROP TABLE \"main\".\"oXHFcGcd04oXHFcGcd04_SESSION\"");
+                sqLiteDatabase.execSQL("ALTER TABLE \"main\".\"TRACK\" RENAME TO \"oXHFcGcd04oXHFcGcd04_TRACK\"");
+                sqLiteDatabase.execSQL("CREATE TABLE \"main\".\"TRACK\" (\"_id\" INTEGER PRIMARY KEY  NOT NULL  DEFAULT (null) ,\"session_id\" INTEGER,\"regtime\" DATETIME,\"acc\" DOUBLE,\"lat\" DOUBLE,\"lng\" DOUBLE,\"alt\" DOUBLE,\"speed\" DOUBLE)");
+                sqLiteDatabase.execSQL("INSERT INTO \"main\".\"TRACK\" SELECT \"track_id\",\"session_id\",\"regtime\",\"acc\",\"lat\",\"lng\",\"alt\",\"speed\" FROM \"main\".\"oXHFcGcd04oXHFcGcd04_TRACK\"");
+                sqLiteDatabase.execSQL("DROP TABLE \"main\".\"oXHFcGcd04oXHFcGcd04_TRACK\"");
+            }
         }
     }
 
