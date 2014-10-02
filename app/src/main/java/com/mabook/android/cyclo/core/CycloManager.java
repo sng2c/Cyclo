@@ -16,6 +16,8 @@ public class CycloManager {
     public static final String ACTION_BROADCAST = "com.mabook.android.cyclo.core.CycloService.ACTION_BROADCAST";
     public static final String AUTHORITY = "com.mabook.android.cyclo.provider";
 
+    public static final String BROADCAST_TYPE_UPDATE = "BROADCAST_TYPE_UPDATE";
+
     public static final String SESSION_FIELD_ID = "_id";
     public static final String SESSION_FIELD_PACKAGE_NAME = "package_name";
     public static final String SESSION_FIELD_APP_NAME = "app_name";
@@ -198,7 +200,6 @@ public class CycloManager {
         Intent intent = getControlIntent(CONTROL_RESUME);
         mContext.startService(intent);
     }
-
 
 
 }

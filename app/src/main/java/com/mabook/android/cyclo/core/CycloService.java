@@ -95,7 +95,7 @@ public class CycloService extends Service {
 
                     Bundle b = new Bundle();
                     b.putParcelable(CycloManager.KEY_BROADCAST_LOCATION, location);
-                    sendBroadcast("UPDATE", b);
+                    sendBroadcast(CycloManager.BROADCAST_TYPE_UPDATE, b);
                 }
                 lastLocation = location;
             }

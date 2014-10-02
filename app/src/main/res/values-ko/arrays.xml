@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="presets">
+        <item>기본</item>
+        <item>3m마다</item>
+        <item>대략</item>
+        <item>저전력</item>
+    </string-array>
+
+</resources>

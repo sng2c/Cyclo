@@ -1,7 +1,11 @@
 package com.mabook.android.cyclo;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
+import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -12,6 +16,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.mabook.android.cyclo.core.CycloManager;
 import com.mabook.android.cyclo.core.data.CycloSession;
@@ -21,10 +26,12 @@ import java.util.ArrayList;
 
 public class MapsActivity extends FragmentActivity {
 
+
     private static final String TAG = "MapsActivity";
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
     private CycloSession mSession;
     private AsyncTask<Void, Void, ArrayList<CycloTrack>> mTask;
+    private BroadcastReceiver mReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,9 +50,37 @@ public class MapsActivity extends FragmentActivity {
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        if (mReceiver != null) {
+            unregisterReceiver(mReceiver);
+            mReceiver = null;
+        }
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         setUpMapIfNeeded();
+
+        if (mSession.getEndTIme() == null) {
+            mReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    Bundle extras = intent.getExtras();
+                    String type = extras.getString(CycloManager.KEY_BROADCAST_TYPE);
+                    long sessionId = extras.getLong(CycloManager.KEY_BROADCAST_SESSION);
+                    long trackId = extras.getLong(CycloManager.KEY_BROADCAST_TRACK);
+                    Location location = extras.getParcelable(CycloManager.KEY_BROADCAST_LOCATION);
+                    if (sessionId == mSession.getId()) {
+                        if (CycloManager.BROADCAST_TYPE_UPDATE.equals(type)) {
+                            updateMap();
+                        }
+                    }
+                }
+            };
+            registerReceiver(mReceiver, new IntentFilter(CycloManager.ACTION_BROADCAST));
+        }
     }
 
     /**
@@ -76,14 +111,7 @@ public class MapsActivity extends FragmentActivity {
         }
     }
 
-    /**
-     * This is where we can add markers or lines, add listeners or move the camera. In this case, we
-     * just add a marker near Africa.
-     * <p/>
-     * This should only be called once and when we are sure that {@link #mMap} is not null.
-     */
-    private void setUpMap() {
-
+    void updateMap() {
         mTask = new AsyncTask<Void, Void, ArrayList<CycloTrack>>() {
 
             @Override
@@ -135,6 +163,16 @@ public class MapsActivity extends FragmentActivity {
                         points.add(latlng);
                     }
 
+                    mMap.addMarker(new MarkerOptions().title("Start").position(points.get(0)));
+                    if (mSession.getEndTIme() == null) {
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(points.get(points.size() - 1), 18));
+                        mMap.addMarker(new MarkerOptions().title("Now").position(points.get(points.size() - 1)));
+                    } else {
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(points.get(0), 18));
+                        mMap.addMarker(new MarkerOptions().title("End").position(points.get(points.size() - 1)));
+                    }
+
+
                     PolylineOptions opt1 = new PolylineOptions()
                             .color(0xFFFFFFFF)
                             .width(12)
@@ -146,11 +184,21 @@ public class MapsActivity extends FragmentActivity {
                             .addAll(points);
                     mMap.addPolyline(opt2);
 
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(points.get(0), 18));
+
                 }
                 mTask = null;
             }
         };
         mTask.execute();
+    }
+
+    /**
+     * This is where we can add markers or lines, add listeners or move the camera. In this case, we
+     * just add a marker near Africa.
+     * <p/>
+     * This should only be called once and when we are sure that {@link #mMap} is not null.
+     */
+    private void setUpMap() {
+        updateMap();
     }
 }

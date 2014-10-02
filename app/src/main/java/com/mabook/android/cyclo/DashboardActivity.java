@@ -44,7 +44,7 @@ public class DashboardActivity extends Activity {
             long trackId = extras.getLong(CycloManager.KEY_BROADCAST_TRACK);
             Location location = extras.getParcelable(CycloManager.KEY_BROADCAST_LOCATION);
 
-            textUpdate.setText(type + "\nsessionId:" + sessionId + "\ntrackId:" + trackId + "\nlocation:" + CycloManager.dumpLocation(location, null));
+//            textUpdate.setText(type + "\nsessionId:" + sessionId + "\ntrackId:" + trackId + "\nlocation:" + CycloManager.dumpLocation(location, null));
         }
     };
     private Button buttonStart;
@@ -107,7 +107,7 @@ public class DashboardActivity extends Activity {
         textUpdate = (TextView) findViewById(R.id.update);
         options = (Spinner) findViewById(R.id.options);
         buttonUpdate = (Button) findViewById(R.id.button_update);
-
+        textUpdate.setVisibility(View.GONE);
 
         cycloManager = new CycloManager(this, new ResultReceiver(new Handler()) {
             @Override
@@ -138,7 +138,7 @@ public class DashboardActivity extends Activity {
 
     void updateList() {
         Uri curi = Uri.parse("content://" + CycloManager.AUTHORITY + "/session");
-        Cursor cursor = getContentResolver().query(curi, CycloManager.SESSION_FIELD_ALL, null, null, null);
+        Cursor cursor = getContentResolver().query(curi, CycloManager.SESSION_FIELD_ALL, null, null, CycloManager.SESSION_FIELD_ID + " desc");
 
         if (mCursorAdapter != null) {
             mCursorAdapter.changeCursor(cursor);
@@ -165,6 +165,9 @@ public class DashboardActivity extends Activity {
                     String start = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_START_TIME));
                     String end = cursor.getString(cursor.getColumnIndex(CycloManager.SESSION_FIELD_END_TIME));
                     ViewHolder vh = (ViewHolder) view.getTag();
+                    if (end == null) {
+                        end = "Now";
+                    }
                     if (vh != null) {
                         vh.tv1.setText(sess + " from " + app);
                         vh.tv2.setText(start + "~" + end);
@@ -290,7 +293,7 @@ public class DashboardActivity extends Activity {
                 profile = new CycloProfile();
                 profile.setCriteria(criteria);
                 profile.setMinTime(0);
-                profile.setMinDistance(1);
+                profile.setMinDistance(3);
                 break;
             case 2:
                 criteria = new Criteria();

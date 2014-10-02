@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Cyclo</string>
+    <string name="title_activity_dashboard">Cyclo 대시보드</string>
+    <string name="action_settings">설정</string>
+    <string name="title_activity_maps">지도</string>
+
+</resources>

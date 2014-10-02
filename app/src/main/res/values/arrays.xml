@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="presets">
-        <item>Fine</item>
-        <item>Over 1m</item>
+        <item>Default</item>
+        <item>Over 3m</item>
         <item>Coarse</item>
         <item>Low Battery</item>
     </string-array>
