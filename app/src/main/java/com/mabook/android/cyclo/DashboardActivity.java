@@ -13,6 +13,7 @@ import android.location.Criteria;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.ResultReceiver;
 import android.text.Editable;
@@ -26,6 +27,7 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.mabook.android.cyclo.core.CycloManager;
 import com.mabook.android.cyclo.core.data.CycloProfile;
@@ -123,6 +125,16 @@ public class DashboardActivity extends Activity {
                             Log.d(TAG, "SUCCESS TO CONTROL");
                         } else {
                             Log.d(TAG, "FAIL TO CONTROL");
+                        }
+                        break;
+                    case CycloManager.CONTROL_EXPORT:
+                        if (result == CycloManager.RESULT_OK) {
+                            Toast.makeText(DashboardActivity.this, "Export OK", Toast.LENGTH_SHORT).show();
+                        }
+                        break;
+                    case CycloManager.CONTROL_IMPORT:
+                        if (result == CycloManager.RESULT_OK) {
+                            Toast.makeText(DashboardActivity.this, "Import OK", Toast.LENGTH_SHORT).show();
                         }
                         break;
                 }
@@ -354,13 +366,21 @@ public class DashboardActivity extends Activity {
     }
 
     public void onClickExport(View view) {
-        File dir = getExternalFilesDir(null);
+        File root = Environment.getExternalStorageDirectory();
+        File dir = new File(root, "Cyclo");
+        if (!dir.isDirectory()) {
+            dir.mkdirs();
+        }
         File file = new File(dir, "Cyclo_exported.sqlite");
         cycloManager.exportDB(file);
     }
 
     public void onClickImport(View view) {
-        File dir = getExternalFilesDir(null);
+        File root = Environment.getExternalStorageDirectory();
+        File dir = new File(root, "Cyclo");
+        if (!dir.isDirectory()) {
+            dir.mkdirs();
+        }
         File file = new File(dir, "Cyclo_exported.sqlite");
         cycloManager.importDB(file);
     }
