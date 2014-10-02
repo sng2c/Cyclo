@@ -5,5 +5,11 @@
     <string name="title_activity_dashboard">Cyclo 대시보드</string>
     <string name="action_settings">설정</string>
     <string name="title_activity_maps">지도</string>
+    <string name="btn_resume">계속</string>
+    <string name="btn_pause">일시정지</string>
+    <string name="btn_start">시작</string>
+    <string name="btn_stop">끝</string>
+    <string name="btn_export">백업</string>
+    <string name="btn_import">복원</string>
 
 </resources>

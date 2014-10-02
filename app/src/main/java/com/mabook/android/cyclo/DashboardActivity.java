@@ -31,6 +31,8 @@ import com.mabook.android.cyclo.core.CycloManager;
 import com.mabook.android.cyclo.core.data.CycloProfile;
 import com.mabook.android.cyclo.core.data.CycloSession;
 
+import java.io.File;
+
 
 public class DashboardActivity extends Activity {
 
@@ -349,5 +351,17 @@ public class DashboardActivity extends Activity {
 
     public void onClickResume(View view) {
         cycloManager.resume();
+    }
+
+    public void onClickExport(View view) {
+        File dir = getExternalFilesDir(null);
+        File file = new File(dir, "Cyclo_exported.sqlite");
+        cycloManager.exportDB(file);
+    }
+
+    public void onClickImport(View view) {
+        File dir = getExternalFilesDir(null);
+        File file = new File(dir, "Cyclo_exported.sqlite");
+        cycloManager.importDB(file);
     }
 }

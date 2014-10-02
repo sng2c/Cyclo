@@ -18,6 +18,14 @@ import android.util.Log;
 import com.mabook.android.cyclo.R;
 import com.mabook.android.cyclo.core.data.CycloProfile;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
 public class CycloService extends Service {
 
     private static final String TAG = "CycloService";
@@ -203,6 +211,14 @@ public class CycloService extends Service {
                     doUpdateProfile();
                     sendResult(resultReceiver, requestCode, CycloManager.RESULT_OK);
                     break;
+                case CycloManager.CONTROL_EXPORT:
+                    doExport(intent.getExtras());
+                    sendResult(resultReceiver, requestCode, CycloManager.RESULT_OK);
+                    break;
+                case CycloManager.CONTROL_IMPORT:
+                    doImport(intent.getExtras());
+                    sendResult(resultReceiver, requestCode, CycloManager.RESULT_OK);
+                    break;
             }
         } else {
             if (resultReceiver != null)
@@ -211,6 +227,7 @@ public class CycloService extends Service {
 
         return Service.START_NOT_STICKY;
     }
+
 
     private void setControllerData(Bundle data) {
         mPackageName = data.getString(CycloManager.KEY_PACKAGE_NAME);
@@ -361,6 +378,69 @@ public class CycloService extends Service {
         mState = CycloManager.STATE_STARTED;
     }
 
+    private void doExport(Bundle extras) {
+        if (extras != null) {
+            String path = extras.getString(CycloManager.KEY_PATH);
+            mDatabase.close();
+            mDatabase = null;
+            File outfile = new File(path);
+            File infile = getDatabasePath(CycloDatabase.DATABASE_NAME);
+            try {
+                InputStream in = new FileInputStream(infile);
+                OutputStream out = new FileOutputStream(outfile);
+
+                // Transfer bytes from in to out
+                byte[] buf = new byte[1024];
+                int len;
+                while ((len = in.read(buf)) > 0) {
+                    out.write(buf, 0, len);
+                }
+                in.close();
+                out.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                mDatabase = new CycloDatabase(getApplicationContext());
+            }
+            mDatabase = new CycloDatabase(getApplicationContext());
+        }
+    }
+
+    private void doImport(Bundle extras) {
+        if (extras != null) {
+            String path = extras.getString(CycloManager.KEY_PATH);
+            mDatabase.close();
+            mDatabase = null;
+
+            File infile = new File(path);
+            if (infile.exists() == false) {
+                return;
+            }
+            File outfile = getDatabasePath(CycloDatabase.DATABASE_NAME);
+            try {
+                InputStream in = new FileInputStream(infile);
+                OutputStream out = new FileOutputStream(outfile);
+
+                // Transfer bytes from in to out
+                byte[] buf = new byte[1024];
+                int len;
+                while ((len = in.read(buf)) > 0) {
+                    out.write(buf, 0, len);
+                }
+                in.close();
+                out.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                mDatabase = new CycloDatabase(getApplicationContext());
+            }
+
+        }
+    }
 
     @Override
     public void onDestroy() {

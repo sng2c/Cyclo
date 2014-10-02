@@ -5,8 +5,11 @@ import android.content.Intent;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.ResultReceiver;
+import android.util.Log;
 
 import com.mabook.android.cyclo.core.data.CycloProfile;
+
+import java.io.File;
 
 /**
  * Created by sng2c on 2014. 9. 17..
@@ -65,6 +68,7 @@ public class CycloManager {
     public static final String KEY_APP_NAME = "KEY_APP_NAME";
     public static final String KEY_PROFILE = "KEY_PROFILE";
     public static final String KEY_RECEIVER = "KEY_RECEIVER";
+    public static final String KEY_PATH = "KEY_PATH";
 
     public static final int CONTROL_NOT_DEFINED = 0;
     public static final int CONTROL_REQUEST = 1;
@@ -74,6 +78,8 @@ public class CycloManager {
     public static final int CONTROL_PAUSE = 5;
     public static final int CONTROL_RESUME = 6;
     public static final int CONTROL_UPDATE_PROFILE = 7;
+    public static final int CONTROL_EXPORT = 8;
+    public static final int CONTROL_IMPORT = 9;
 
     public static final int STATE_STOPPED = 1;
     public static final int STATE_STARTED = 2;
@@ -110,6 +116,10 @@ public class CycloManager {
                 return "CONTROL_RESUME";
             case CONTROL_UPDATE_PROFILE:
                 return "CONTROL_UPDATE_PROFILE";
+            case CONTROL_EXPORT:
+                return "CONTROL_EXPORT";
+            case CONTROL_IMPORT:
+                return "CONTROL_IMPORT";
             default:
                 return "CONTROL_NOT_DEFINED";
         }
@@ -201,5 +211,19 @@ public class CycloManager {
         mContext.startService(intent);
     }
 
+    public void exportDB(File file) {
+        String path = file.getAbsolutePath();
+        Log.d(TAG, "exportDB to " + path);
+        Intent intent = getControlIntent(CONTROL_EXPORT);
+        intent.putExtra(KEY_PATH, path);
+        mContext.startService(intent);
+    }
 
+    public void importDB(File file) {
+        String path = file.getAbsolutePath();
+        Log.d(TAG, "importDB from " + path);
+        Intent intent = getControlIntent(CONTROL_IMPORT);
+        intent.putExtra(KEY_PATH, path);
+        mContext.startService(intent);
+    }
 }

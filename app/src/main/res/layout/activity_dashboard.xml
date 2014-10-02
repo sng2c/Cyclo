@@ -26,6 +26,21 @@
             android:enabled="false"
             android:onClick="onClickUpdate"
             android:text="Update" />
+
+        <Button
+            android:id="@+id/button_export"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onClickExport"
+            android:text="@string/btn_export" />
+
+        <Button
+            android:id="@+id/button_import"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onClickImport"
+            android:text="@string/btn_import" />
+
     </LinearLayout>
 
     <LinearLayout
@@ -36,36 +51,41 @@
             android:id="@+id/button_start"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:enabled="false"
             android:onClick="onClickStart"
-            android:text="Start" />
+            android:text="@string/btn_start" />
 
         <Button
             android:id="@+id/button_pause"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:enabled="false"
             android:onClick="onClickPause"
-            android:text="Pause" />
+            android:text="@string/btn_pause" />
 
         <Button
             android:id="@+id/button_resume"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:enabled="false"
             android:onClick="onClickResume"
-            android:text="Resume" />
+            android:text="@string/btn_resume" />
 
         <Button
             android:id="@+id/button_stop"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:enabled="false"
             android:onClick="onClickStop"
-            android:text="Stop" />
+            android:text="@string/btn_stop" />
 
 
     </LinearLayout>
+
 
     <TextView
         android:id="@+id/update"
