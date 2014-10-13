@@ -11,7 +11,7 @@
             android:name=".core.CycloService"
             android:enabled="true"
             android:exported="true">
-            <intent-filter>
+        <intent-filter>
                 <action android:name="com.mabook.android.cyclo.core.CycloService.ACTION_CONTROL" />
             </intent-filter>
         </service>
@@ -20,7 +20,7 @@
             android:name=".DashboardActivity"
             android:label="@string/title_activity_dashboard"
             android:launchMode="singleTop">
-            <intent-filter>
+        <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -35,7 +35,7 @@
 
         <activity
             android:name=".MapsActivity"
-            android:label="@string/title_activity_maps"></activity>
+            android:label="@string/title_activity_maps" />
 
         <meta-data
             android:name="com.google.android.gms.version"
@@ -43,6 +43,10 @@
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
             android:value="@string/google_maps_key" />
+
+        <activity
+            android:name=".WebMapActivity"
+            android:label="@string/title_activity_web_map"></activity>
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />

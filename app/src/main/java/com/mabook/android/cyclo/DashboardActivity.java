@@ -211,7 +211,8 @@ public class DashboardActivity extends Activity {
                 public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                     CycloSession session = (CycloSession) view.getTag(R.id.session_object);
                     Log.d(TAG, "session:" + session);
-                    Intent intent = new Intent(DashboardActivity.this, MapsActivity.class);
+//                    Intent intent = new Intent(DashboardActivity.this, MapsActivity.class);
+                    Intent intent = new Intent(DashboardActivity.this, WebMapActivity.class);
                     intent.putExtra("session", session);
                     startActivity(intent);
                 }

@@ -5,11 +5,13 @@
     <string name="title_activity_dashboard">Cyclo DashBoard</string>
     <string name="action_settings">Settings</string>
     <string name="title_activity_maps">Map</string>
+    <string name="title_activity_web_map">Map</string>
     <string name="btn_resume">Resume</string>
     <string name="btn_pause">Pause</string>
     <string name="btn_start">Start</string>
     <string name="btn_stop">Stop</string>
     <string name="btn_export">Export</string>
     <string name="btn_import">Import</string>
+    <string name="btn_update">Update</string>
 
 </resources>

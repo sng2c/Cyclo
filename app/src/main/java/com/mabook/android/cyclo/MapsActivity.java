@@ -10,19 +10,21 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
+import android.view.View;
+import android.widget.TextView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.mabook.android.cyclo.core.CycloDatabase;
 import com.mabook.android.cyclo.core.CycloManager;
 import com.mabook.android.cyclo.core.data.CycloSession;
-import com.mabook.android.cyclo.core.data.CycloTrack;
 
 import java.util.ArrayList;
+import java.util.Date;
 
 public class MapsActivity extends FragmentActivity {
 
@@ -30,13 +32,17 @@ public class MapsActivity extends FragmentActivity {
     private static final String TAG = "MapsActivity";
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
     private CycloSession mSession;
-    private AsyncTask<Void, Void, ArrayList<CycloTrack>> mTask;
+    private AsyncTask<Void, Void, ArrayList<LatLng>> mTask;
     private BroadcastReceiver mReceiver;
+    private TextView mTxtStatistics;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+
+        mTxtStatistics = (TextView) findViewById(R.id.statistics);
+        mTxtStatistics.setVisibility(View.GONE);
 
         Intent startIntent = getIntent();
         Bundle startBundle = startIntent.getExtras();
@@ -112,56 +118,88 @@ public class MapsActivity extends FragmentActivity {
     }
 
     void updateMap() {
-        mTask = new AsyncTask<Void, Void, ArrayList<CycloTrack>>() {
+        mTask = new AsyncTask<Void, Void, ArrayList<LatLng>>() {
+            double elapsed = 0;
+            double totalDistance = 0;
+            double totalSpeed = 0;
+            double maxSpeed = 0;
+            double speedCount = 0;
+            double avrSpeed = 0;
+            float[] dist = new float[1];
+            Date beforeTime = null;
+            double totalTime = 0;
 
             @Override
-            protected ArrayList<CycloTrack> doInBackground(Void... voids) {
+            protected ArrayList<LatLng> doInBackground(Void... voids) {
                 Uri contentUri = Uri.parse("content://" + CycloManager.AUTHORITY + "/session/" + mSession.getId() + "/track");
                 Cursor cursor = getContentResolver().query(contentUri, CycloManager.TRACK_FIELD_ALL, null, null, null);
-                ArrayList<CycloTrack> tracks = new ArrayList<CycloTrack>();
+//                ArrayList<CycloTrack> tracks = new ArrayList<CycloTrack>();
+                ArrayList<LatLng> points = new ArrayList<LatLng>();
+
+                LatLng beforeLatLng = null;
+                LatLng latlng = null;
+
+
                 while (cursor.moveToNext()) {
-                    tracks.add(new CycloTrack(
-                            cursor.getLong(cursor.getColumnIndex(CycloManager.TRACK_FIELD_ID)),
-                            cursor.getLong(cursor.getColumnIndex(CycloManager.TRACK_FIELD_SESSION_ID)),
-                            cursor.getString(cursor.getColumnIndex(CycloManager.TRACK_FIELD_REGTIME)),
-                            cursor.getFloat(cursor.getColumnIndex(CycloManager.TRACK_FIELD_ACCURACY)),
-                            cursor.getDouble(cursor.getColumnIndex(CycloManager.TRACK_FIELD_LATITUDE)),
-                            cursor.getDouble(cursor.getColumnIndex(CycloManager.TRACK_FIELD_LONGITUDE)),
-                            cursor.getDouble(cursor.getColumnIndex(CycloManager.TRACK_FIELD_ALTITUDE)),
-                            cursor.getDouble(cursor.getColumnIndex(CycloManager.TRACK_FIELD_SPEED))
-                    ));
+//                    tracks.add(new CycloTrack(
+//                            cursor.getLong(cursor.getColumnIndex(CycloManager.TRACK_FIELD_ID)),
+//                            cursor.getLong(cursor.getColumnIndex(CycloManager.TRACK_FIELD_SESSION_ID)),
+//                            cursor.getString(cursor.getColumnIndex(CycloManager.TRACK_FIELD_REGTIME)),
+//                            cursor.getFloat(cursor.getColumnIndex(CycloManager.TRACK_FIELD_ACCURACY)),
+//                            cursor.getDouble(cursor.getColumnIndex(CycloManager.TRACK_FIELD_LATITUDE)),
+//                            cursor.getDouble(cursor.getColumnIndex(CycloManager.TRACK_FIELD_LONGITUDE)),
+//                            cursor.getDouble(cursor.getColumnIndex(CycloManager.TRACK_FIELD_ALTITUDE)),
+//                            cursor.getDouble(cursor.getColumnIndex(CycloManager.TRACK_FIELD_SPEED))
+//                    ));
+
+                    double speed = cursor.getDouble(cursor.getColumnIndex(CycloManager.TRACK_FIELD_SPEED));
+                    if (speed > 1) {
+                        totalSpeed += speed;
+                        speedCount++;
+                        if (speed > maxSpeed) {
+                            maxSpeed = speed;
+                        }
+                        Date d = CycloDatabase.getDateTimeDate(cursor.getString(cursor.getColumnIndex(CycloManager.TRACK_FIELD_REGTIME)));
+                        if (beforeTime != null) {
+                            long diff = d.getTime() - beforeTime.getTime();
+                            totalTime += diff;
+                        }
+                        beforeTime = d;
+                    }
+
+                    latlng = new LatLng(
+                            cursor.getDouble(cursor.getColumnIndex(CycloManager.TRACK_FIELD_LATITUDE))
+                            , cursor.getDouble(cursor.getColumnIndex(CycloManager.TRACK_FIELD_LONGITUDE)));
+
+                    if (beforeLatLng != null) {
+                        Location.distanceBetween(beforeLatLng.latitude, beforeLatLng.longitude,
+                                latlng.latitude, latlng.longitude, dist);
+                        totalDistance += dist[0];
+                    }
+
+                    points.add(latlng);
+                    beforeLatLng = latlng;
                 }
-                return tracks;
+                // m/s -> km/h
+                avrSpeed = totalSpeed * 3600.0 / 1000.0 / speedCount;
+                maxSpeed = maxSpeed * 3600.0 / 1000.0;
+                totalDistance = totalDistance / 1000.0;
+                totalTime = totalTime / 1000.0;
+                return points;
             }
 
             @Override
-            protected void onPostExecute(ArrayList<CycloTrack> tracks) {
+            protected void onPostExecute(ArrayList<LatLng> points) {
                 mMap.clear();
-                if (tracks.size() > 1) {
-                    LatLngBounds.Builder builder = LatLngBounds.builder();
-                    LatLng latlng = null;
-//                    for(int i=0; i<tracks.size(); i+=10) {
-//                        CycloTrack track = tracks.get(i);
-//                        latlng = new LatLng(track.getLatitude(), track.getLongitude());
-//
-//
-//                        CircleOptions circleOpt = new CircleOptions()
-//                                .center(latlng)
-//                                .radius(1)
-//                                .fillColor(0xFFFF00FF)
-//                                .strokeWidth(0)
-//                                ;
-//                        Circle c = mMap.addCircle(circleOpt);
-//                        builder = builder.include(latlng);
-//
-//                    }
-//                    LatLngBounds bound = builder.build();
-                    ArrayList<LatLng> points = new ArrayList<LatLng>();
-                    for (int i = 0; i < tracks.size(); i++) {
-                        CycloTrack track = tracks.get(i);
-                        latlng = new LatLng(track.getLatitude(), track.getLongitude());
-                        points.add(latlng);
-                    }
+                if (points.size() > 1) {
+
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("Elapsed:").append(String.format("%d", (long) Math.round(totalTime / 60.0))).append("min\n")
+                            .append("Distance:").append(String.format("%.3f", totalDistance)).append("km\n")
+                            .append("MAX Speed:").append(String.format("%.3f", maxSpeed)).append("km/h\n")
+                            .append("AVR Speed:").append(String.format("%.3f", avrSpeed)).append("km/h");
+                    mTxtStatistics.setText(sb.toString());
+                    mTxtStatistics.setVisibility(View.VISIBLE);
 
                     mMap.addMarker(new MarkerOptions().title("Start").position(points.get(0)));
                     if (mSession.getEndTIme() == null) {
@@ -171,7 +209,6 @@ public class MapsActivity extends FragmentActivity {
                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(points.get(0), 18));
                         mMap.addMarker(new MarkerOptions().title("End").position(points.get(points.size() - 1)));
                     }
-
 
                     PolylineOptions opt1 = new PolylineOptions()
                             .color(0xFFFFFFFF)
