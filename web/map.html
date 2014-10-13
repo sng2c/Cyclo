@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Cyclo</title>
+    <style>
+        html, body{
+        margin: 0px;
+        padding: 0px;
+        height:100%;
+        }
+        #map-canvas {
+        height: 100%;
+        margin: 0px;
+        padding: 0px
+        }
+        #json_lines {
+        height:50px;
+        width:100%;
+        display:none;
+        }
+        #apply {
+        display:none;
+        }
+
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script type="text/javascript"
+            src="http://maps.googleapis.com/maps/api/js?key=AIzaSyAHu-QTr6MRXdqr04ZWNZ9ZWh7FcPvcawQ&sensor=FALSE"></script>
+    <script>
+var map;
+function initialize() {
+  // Create the map.
+  var mapOptions = {
+    zoom: 16,
+    // center: new google.maps.LatLng(37.54704284, 127.14020812),
+    // mapTypeId: google.maps.MapTypeId.TERRAIN
+  };
+
+  map = new google.maps.Map(document.getElementById('map-canvas'),
+      mapOptions);
+
+  $('#apply').click(function(){apply($('#json_lines').val())});
+}
+
+var loclist = [];
+var ovs = [];
+
+
+function apply(json_data){
+	
+  var lineSymbol = {
+    path: google.maps.SymbolPath.FORWARD_OPEN_ARROW
+  };
+
+
+  var lineoption = {
+	strokeOpacity: 1.0,
+	strokeWeight: 1.3,
+	icons: [{
+		icon: lineSymbol,
+		//offset: '50%',
+		repeat: '20px'
+	}],
+  };
+
+
+  if( ovs.length > 0 ){
+    for(var idx in ovs){
+      ovs[idx].setMap(null);
+    }
+    ovs = [];
+  }
+  var json_strs = json_data.split(/\n/);
+  
+  var color = "#aa00aa";
+  var poly = [];
+  for(var idx in json_strs){
+    var js = json_strs[idx];
+    if( js ){
+      if( js.match(/^#/) ){
+		if( poly.length > 0 ){
+  			lineoption.strokeColor = color;
+			lineoption.path = poly;
+	  		lineoption.map = map;
+	  		var flightPath = new google.maps.Polyline(lineoption);
+	  		ovs.push(flightPath);
+      		poly = [];
+        }
+        color = js;
+      }
+      else{
+        var obj = eval("("+js+")");
+        obj.color = color;
+        // var ov = addWayPoint(obj);
+
+        var loc = new google.maps.LatLng(parseFloat(obj.lat), parseFloat(obj.lng));
+        poly.push(loc);
+        loclist.push(loc);
+      }
+    }
+  }
+
+  lineoption.strokeColor = color;
+  lineoption.path = poly;
+  lineoption.map = map;
+  flightPath = new google.maps.Polyline(lineoption);
+  ovs.push(flightPath);
+  poly = [];
+  
+  var prevLoc;
+  var unionBound;
+  var beforeColor;
+
+  for(idx in loclist){
+    var curLoc = loclist[idx];
+    if(idx==0){
+      unionBound = new google.maps.LatLngBounds(curLoc, curLoc);
+    }
+    else{
+      unionBound = unionBound.extend(curLoc);
+      //console.log(unionBound.toString());
+    }
+  }
+
+  map.fitBounds(unionBound);
+}
+
+google.maps.event.addDomListener(window, 'load', initialize);
+
+
+    </script>
+</head>
+<body>
+<div id="map-canvas"></div>
+<textarea id="json_lines">#aa0000
+    {"uts":"1411023660295","lng":"127.00544398","spd":"2.795085","lat":"37.53732237","alt":"64.5","acc":"15.0"}
+    {"uts":"1411023661200","lng":"127.0053392","spd":"3.354102","lat":"37.53728535","alt":"88.0999984741211","acc":"49.0"}
+    {"uts":"1411023662268","lng":"127.00546032","spd":"1.118034","lat":"37.53734447","alt":"68.69999694824219","acc":"12.0"}
+    {"uts":"1411023663263","lng":"127.00541428","spd":"1.118034","lat":"37.53737672","alt":"75.30000305175781","acc":"12.0"}
+    {"uts":"1411023664269","lng":"127.00541412","spd":"1.5811388","lat":"37.53741088","alt":"72.4000015258789","acc":"12.0"}
+    {"uts":"1411023665267","lng":"127.00576823","spd":"0.9013878","lat":"37.53728916","alt":"65.5999984741211","acc":"9.0"}
+    {"uts":"1411023666267","lng":"127.00575159","spd":"1.3462912","lat":"37.5373089","alt":"70.0999984741211","acc":"8.0"}
+    {"uts":"1411023667301","lng":"127.00573683","spd":"1.25","lat":"37.53729045","alt":"55.900001525878906","acc":"8.0"}
+    #00aa00
+    {"uts":"1411023668305","lng":"127.00570709","spd":"1.25","lat":"37.53731943","alt":"66.4000015258789","acc":"9.0"}
+    {"uts":"1411023669304","lng":"127.0056597","spd":"1.5","lat":"37.53738455","alt":"72.0999984741211","acc":"11.0"}
+    {"uts":"1411023670000","lng":"127.00539897","spd":"0.70710677","lat":"37.53740862","alt":"96.30000305175781","acc":"8.0"}
+    {"uts":"1411023671000","lng":"127.0054019","spd":"0.0","lat":"37.53740616","alt":"94.5999984741211","acc":"3.0"}
+    {"uts":"1411023672000","lng":"127.00540199","spd":"0.0","lat":"37.53740746","alt":"94.4000015258789","acc":"4.0"}
+    {"uts":"1411023673000","lng":"127.00539793","spd":"1.0","lat":"37.53741268","alt":"94.5","acc":"4.0"}
+    {"uts":"1411023674000","lng":"127.00540692","spd":"1.0","lat":"37.53741988","alt":"91.5","acc":"4.0"}
+    {"uts":"1411023675000","lng":"127.00540964","spd":"1.0","lat":"37.53742394","alt":"88.0","acc":"4.0"}
+</textarea>
+<button id="apply">Apply</button>
+</body>
+</html>
+
+
