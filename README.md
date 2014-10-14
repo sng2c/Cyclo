@@ -20,14 +20,14 @@ How to?
 1. Install app.(Dashboard)
 1. Copy CycloConnector.java file to your project.
 1. Use it in your activity. (See DashboardActivity.java)
-1. You can control the service with CycloConnector.
+1. You can control the service with CycloManager.
 1. You can receive a current location through Broadcast Receiver.
 1. You can get tracking data through ContentProvider.
 
 Synopsis
 --------
 
-See DashBoardActivity and MapActivity.
+See DashboardActivity and MapActivity.
 
 ...It will be updated...
 
