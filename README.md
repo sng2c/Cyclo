@@ -16,8 +16,7 @@ CycloService is a Messenger Service, so you don't need to configure complexly.
 How to?
 -------
 
-1. Build this project by Android Studio.
-1. Install app.(Dashboard)
+1. Install [Cyclo](https://play.google.com/store/apps/details?id=com.mabook.android.cyclo).
 1. Copy CycloConnector.java file to your project.
 1. Use it in your activity. (See DashboardActivity.java)
 1. You can control the service with CycloManager.
